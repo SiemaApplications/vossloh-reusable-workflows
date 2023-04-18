@@ -105,6 +105,16 @@ jobs:
             exit 1
           fi
 
+      - name: debug
+        run: |
+          pwd
+          echo "$ ls -l ${{ inputs.key-file }}"
+          ls -l ${{ inputs.key-file }}
+          echo "$ ls -l"
+          ls -l
+          echo "ls -l ${{ steps.get-repo-name.outputs.repo_name }}"
+          ls -l ${{ steps.get-repo-name.outputs.repo_name }}
+
       - name: Twister args
         id: twister-args
         run: |
