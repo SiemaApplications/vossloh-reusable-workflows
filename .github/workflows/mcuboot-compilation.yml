@@ -90,7 +90,7 @@ jobs:
           OLD_IFS="${IFS}"
           IFS=";"
           testargs=""
-          for t in ${{ inputs.tests-names }}; do
+          for t in '"${{ inputs.tests-names }}"'; do
             testargs="${testargs} --test '${t}'"
           done
           IFS="${OLD_IFS}"
