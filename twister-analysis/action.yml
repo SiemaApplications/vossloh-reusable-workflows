@@ -9,6 +9,7 @@ runs:
   using: "composite"
   steps:
     - name: 'Analyse twister output file'
+      shell: bash
       run: twister-analysis/analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}
 
 
