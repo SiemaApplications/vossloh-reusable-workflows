@@ -20,6 +20,10 @@ on:
         description: 'Space separated list of test case name to build'
         required: true
         type: string
+      fallback-key-file:
+        description: 'Key to use as fallback if signing-key is not available (action run from fork)'
+        required: false
+        type: string
 
     secrets:
       signing-key:
@@ -79,6 +83,7 @@ jobs:
               outfile.write("%s" % (key))
 
       - name: hash key
+        id: signing-key-info
         run: |
           ls -l ${{ inputs.key-file }}
           echo "md5 of ${{ inputs.key-file }}"
@@ -86,6 +91,19 @@ jobs:
           echo "md5 of secret"
           echo ${{ secrets.signing-key }} | md5sum
           echo ${{ secrets.signing-key }} | wc -l
+          keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
+          echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
+
+      - name: Signing Key Fallback
+        if: ${{ steps.signing-key-info.outputs.keyfile_sz == 0 }}
+        run: |
+          if [ -n "${{ inputs.fallback-key-file }}" ]; then
+            ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
+            echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
+          else
+            echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
+            exit 1
+          fi
 
       - name: Twister args
         id: twister-args
