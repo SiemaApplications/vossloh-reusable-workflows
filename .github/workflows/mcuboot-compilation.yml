@@ -158,7 +158,7 @@ jobs:
             ${{ inputs.twister-outdir }}/**/zephyr.hex
 
       - name: Check MCuboot Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister-analysis@main
+        uses: SiemaApplications/vossloh-gh-actions@main
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json
 
