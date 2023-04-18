@@ -17,7 +17,7 @@ on:
         type: string
         default: "twister-out"
       tests-names:
-        description: 'Semicolon separated list of test case name to build'
+        description: 'Comma separated list of test case name to build'
         required: true
         type: string
 
@@ -88,9 +88,9 @@ jobs:
           fi
           echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
           OLD_IFS="${IFS}"
-          IFS=";"
+          IFS=","
           testargs=""
-          for t in '"${{ inputs.tests-names }}"'; do
+          for t in ${{ inputs.tests-names }}; do
             testargs="${testargs} --test '${t}'"
           done
           IFS="${OLD_IFS}"
