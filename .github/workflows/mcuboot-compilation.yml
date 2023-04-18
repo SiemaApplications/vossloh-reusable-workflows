@@ -15,6 +15,7 @@ on:
         description: 'Twister output directory'
         required: false
         type: string
+        default: "twister-out"
       tests-names:
         description: 'Semicolon separated list of test case name to build'
         required: true
@@ -28,7 +29,42 @@ on:
 jobs:
   mcuboot_compilation_job:
     runs-on: ubuntu-latest
+    container: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
     steps:
+      - name: Get Repository Name
+        id: get-repo-name
+        run: |
+          repo_name=$(echo ${{ github.repository }} | cut -d '/' -f 2)
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository Name: ${repo_name}"
+          echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: ${{ steps.get-repo-name.outputs.repo_name }}
+
+      - name: Cache West Module
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-west-modules
+        with:
+          path: |
+            bootloader/
+            modules/
+            tools/
+            zephyr/
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('${{ steps.get-repo-name.outputs.repo_name }}/west.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: West Init and Update
+        run: |
+          west init -l ${{ steps.get-repo-name.outputs.repo_name }}
+          west update --narrow --fetch-opt=--depth=1
+
       # Avoid leaking the private key on the command line
       - name: Get Signing Key
         shell: python
@@ -50,11 +86,7 @@ jobs:
           else
             echo "board_root=" >> $GITHUB_OUTPUT
           fi
-          if [ -n "${{ inputs.twister-outdir }}" ]; then
-            echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
-          else
-            echo "outdir=" >> $GITHUB_OUTPUT
-          fi
+          echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
           OLD_IFS="${IFS}"
           IFS=";"
           testargs=""
@@ -70,3 +102,28 @@ jobs:
             ${{ steps.twister-args.outputs.outdir }} \
             --testsuite-root bootloader/mcuboot/boot/zephyr/ \
             ${{ steps.twister-args.outputs.testargs }}
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 7
+          name: twister_mcuboot_build_logs
+          path: |
+            ${{ inputs.twister-outdir }}/**/build.log
+
+      - name: Upload MCUboot Binaries
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 7
+          name: mcuboot_binaries
+          path: |
+            ${{ inputs.twister-outdir }}/**/zephyr.bin
+            ${{ inputs.twister-outdir }}/**/zephyr.elf
+            ${{ inputs.twister-outdir }}/**/zephyr.hex
+
+      - name: Check MCuboot Twister Results
+        uses: SiemaApplications/vossloh-gh-actions/twister-analysis@main
+        with:
+          twister-result-file: ${{ inputs.twister-outdir }}/twister.json
+

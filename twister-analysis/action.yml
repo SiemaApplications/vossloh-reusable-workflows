@@ -1,0 +1,14 @@
+name: 'Twister Results Analysis'
+description: 'Analyse twister output file'
+inputs:
+  twister-result-file:
+    description: 'path to twister.json produced by twister run'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Analyse twister output file'
+      run: twister-analysis/analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}
+
+
