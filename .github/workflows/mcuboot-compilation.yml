@@ -1,0 +1,72 @@
+name: MCUboot compilation
+
+on:
+  workflow_call:
+    inputs:
+      board-root-dir:
+        description: 'Path to custom boards directory passed to --board-root option'
+        required: false
+        type: string
+      key-file:
+        description: 'Path where content of secret signing key is stored'
+        required: true
+        type: string
+      twister-outdir:
+        description: 'Twister output directory'
+        required: false
+        type: string
+      tests-names:
+        description: 'Semicolon separated list of test case name to build'
+        required: true
+        type: string
+
+    secrets:
+      signing-key:
+        description: 'Content of PEM key for which public part is stored in MCUboot firmware'
+        required: true
+
+jobs:
+  mcuboot_compilation_job:
+    runs-on: ubuntu-latest
+    steps:
+      # Avoid leaking the private key on the command line
+      - name: Get Signing Key
+        shell: python
+        env:
+          MCUBOOT_KEY: ${{ secrets.signing-key }}
+          KEY_FILE: ${{ inputs.key-file }}
+        run: |
+          import os
+          key = os.environ.get('MCUBOOT_KEY')
+          key_file = os.environ.get('KEY_FILE')
+          with open(key_file, 'w', encoding='utf-8') as outfile:
+              outfile.write("%s" % (key))
+
+      - name: Twister args
+        id: twister-args
+        run: |
+          if [ -n "${{ inputs.board-root-dir }}" ]; then
+            echo "board_root=--board-root ${{ inputs.board-root-dir }}" >> $GITHUB_OUTPUT
+          else
+            echo "board_root=" >> $GITHUB_OUTPUT
+          fi
+          if [ -n "${{ inputs.twister-outdir }}" ]; then
+            echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
+          else
+            echo "outdir=" >> $GITHUB_OUTPUT
+          fi
+          OLD_IFS="${IFS}"
+          IFS=";"
+          testargs=""
+          for t in ${{ inputs.tests-names }}; do
+            testargs="${testargs} --test '${t}'"
+          done
+          IFS="${OLD_IFS}"
+          echo "testargs=${testargs}" >> $GITHUB_OUTPUT
+
+      - name: MCUBoot Compilation
+        run: |
+          ./zephyr/scripts/twister ${{ steps.twister-args.outputs.board_root }} \
+            ${{ steps.twister-args.outputs.outdir }} \
+            --testsuite-root bootloader/mcuboot/boot/zephyr/ \
+            ${{ steps.twister-args.outputs.testargs }}
