@@ -6,15 +6,8 @@ inputs:
     required: true
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
-    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
-      shell: bash
-    - shell: bash
-      run: |
-        pwd
-        echo $PATH
-        echo $GITHUB_PATH
     - name: 'Analyse twister output file'
       shell: bash
       run: ${{ github.action_path }}/analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}
