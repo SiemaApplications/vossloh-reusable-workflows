@@ -95,6 +95,9 @@ jobs:
           done
           IFS="${OLD_IFS}"
           echo "testargs=${testargs}" >> $GITHUB_OUTPUT
+          echo "board_root: ${board_root}"
+          echo "outdir: ${outdir}"
+          echo "testargs: ${testargs}"
 
       - name: MCUBoot Compilation
         run: |
