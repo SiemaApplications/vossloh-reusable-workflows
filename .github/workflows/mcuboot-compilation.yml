@@ -78,6 +78,15 @@ jobs:
           with open(key_file, 'w', encoding='utf-8') as outfile:
               outfile.write("%s" % (key))
 
+      - name: hash key
+        run: |
+          ls -l ${{ inputs.key-file }}
+          echo "md5 of ${{ inputs.key-file }}"
+          md5sum ${{ inputs.key-file }}
+          echo "md5 of secret"
+          echo ${{ secrets.signing-key }} | md5sum
+          echo ${{ secrets.signing-key }} | wc -l
+
       - name: Twister args
         id: twister-args
         run: |
