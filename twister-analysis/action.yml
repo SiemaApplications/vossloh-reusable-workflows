@@ -10,6 +10,30 @@ runs:
   steps:
     - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
       shell: bash
+    - shell: bash
+      run: |
+        pwd
+        echo $PATH
+        echo $GITHUB_PATH
+        echo "-----"
+        ls -l ../
+        echo "------------"
+        ls -l ../../
+        echo "ls /home"
+        ls /home
+        echo "ls /home/runner"
+        ls /home/runner/work
+        echo "ls /home/runner/work/_actions"
+        ls /home/runner/work/_actions/
+        echo "ls /home/runner/work/_actions/SiemaApplications"
+        ls /home/runner/work/_actions/SiemaApplications
+        echo "ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/"
+        ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/
+        echo "ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main"
+        ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main
+        echo "ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister-analysis"
+        ls /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister-analysis
+        ls ${{ github.action_path }}/analyse_twister_results.py
     - name: 'Analyse twister output file'
       shell: bash
       run: analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}
