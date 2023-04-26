@@ -8,8 +8,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    - run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+      shell: bash
+
     - name: 'Analyse twister output file'
       shell: bash
-      run: ${{ github.action_path }}/analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}
-
-
+      run: analyse_twister_results.py --file-report $GITHUB_STEP_SUMMARY --fail ${{ inputs.twister-result-file }}

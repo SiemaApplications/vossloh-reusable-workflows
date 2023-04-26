@@ -33,7 +33,12 @@ on:
 jobs:
   mcuboot_compilation_job:
     runs-on: ubuntu-latest
-    container: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
+    container:
+      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
+      volumes:
+        # When using a custom container, the path of the individuals composite action is not mounted into the target container and needs to be manually provided.
+        # See https://github.com/orgs/community/discussions/53771
+        - /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis:/home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis
     steps:
       - name: Get Repository Name
         id: get-repo-name
@@ -158,7 +163,7 @@ jobs:
             ${{ inputs.twister-outdir }}/**/zephyr.hex
 
       - name: Check MCuboot Twister Results
-        uses: SiemaApplications/vossloh-gh-actions@main
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@main
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json
 
