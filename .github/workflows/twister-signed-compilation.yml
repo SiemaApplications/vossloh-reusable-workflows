@@ -59,6 +59,11 @@ jobs:
         with:
           path: ${{ steps.get-repo-name.outputs.repo_name }}
 
+      - run: |
+          ls -l ${{ steps.get-repo-name.outputs.repo_name }}
+          echo "-------------"
+          ls -l ${{ steps.get-repo-name.outputs.repo_name }}/*
+
       - name: Cache West Module
         uses: actions/cache@v3
         id: cache
