@@ -1,0 +1,179 @@
+name: Twister Signed Compilation
+
+on:
+  workflow_call:
+    inputs:
+      app-dir:
+        description: 'Base directory to search the tests'
+        required: false
+        type: string
+        default: "."
+      board-root-dir:
+        description: 'Path to custom boards directory passed to --board-root option'
+        required: false
+        type: string
+      key-file:
+        description: 'Path where content of secret signing key is stored'
+        required: true
+        type: string
+      twister-outdir:
+        description: 'Twister output directory'
+        required: false
+        type: string
+        default: "twister-out"
+      tests-names:
+        description: 'Space separated list of test case name to build'
+        required: true
+        type: string
+      fallback-key-file:
+        description: 'Key to use as fallback if signing-key is not available (action run from fork)'
+        required: false
+        type: string
+
+    secrets:
+      signing-key:
+        description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
+        required: true
+
+jobs:
+  compile:
+    name: Twister Signed Compilation
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
+      volumes:
+        # When using a custom container, the path of the individuals composite action is not mounted into the target container and needs to be manually provided.
+        # See https://github.com/orgs/community/discussions/53771
+        - /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis:/home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis
+    steps:
+      - name: Get Repository Name
+        id: get-repo-name
+        run: |
+          repo_name=$(echo ${{ github.repository }} | cut -d '/' -f 2)
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository Name: ${repo_name}"
+          echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: ${{ steps.get-repo-name.outputs.repo_name }}
+
+      - name: Cache West Module
+        uses: actions/cache@v3
+        id: cache
+        env:
+          cache-name: cache-west-modules
+        with:
+          path: |
+            bootloader/
+            modules/
+            tools/
+            zephyr/
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('${{ steps.get-repo-name.outputs.repo_name }}/west.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: West Init and Update
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          west init -l ${{ steps.get-repo-name.outputs.repo_name }}
+          west update --narrow --fetch-opt=--depth=1
+
+      # Avoid leaking the private key on the command line
+      - name: Get Signing Key
+        shell: python
+        env:
+          MCUBOOT_KEY: ${{ secrets.signing-key }}
+          KEY_FILE: ${{ inputs.key-file }}
+        run: |
+          import os
+          key = os.environ.get('MCUBOOT_KEY')
+          key_file = os.environ.get('KEY_FILE')
+          with open(key_file, 'w', encoding='utf-8') as outfile:
+              outfile.write("%s" % (key))
+
+      - name: hash key
+        id: signing-key-info
+        run: |
+          ls -l ${{ inputs.key-file }}
+          echo "md5 of ${{ inputs.key-file }}"
+          md5sum ${{ inputs.key-file }}
+          echo "md5 of secret"
+          echo ${{ secrets.signing-key }} | md5sum
+          echo ${{ secrets.signing-key }} | wc -l
+          keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
+          echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
+
+      - name: Signing Key Fallback
+        if: ${{ steps.signing-key-info.outputs.keyfile_sz == 0 }}
+        run: |
+          if [ -n "${{ inputs.fallback-key-file }}" ]; then
+            ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
+            echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
+          else
+            echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
+            exit 1
+          fi
+
+      - name: debug
+        run: |
+          pwd
+          echo "$ ls -l ${{ inputs.key-file }}"
+          ls -l ${{ inputs.key-file }}
+          echo "$ ls -l"
+          ls -l
+          echo "ls -l ${{ steps.get-repo-name.outputs.repo_name }}"
+          ls -l ${{ steps.get-repo-name.outputs.repo_name }}
+
+      - name: Twister args
+        id: twister-args
+        run: |
+          if [ -n "${{ inputs.board-root-dir }}" ]; then
+            echo "board_root=--board-root ${{ inputs.board-root-dir }}" >> $GITHUB_OUTPUT
+          else
+            echo "board_root=" >> $GITHUB_OUTPUT
+          fi
+          echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" >> $GITHUB_OUTPUT
+          echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
+          testargs=""
+          for t in ${{ inputs.tests-names }}; do
+            testargs="${testargs} --test ${t}"
+          done
+          echo "testargs=${testargs}" >> $GITHUB_OUTPUT
+          echo "testargs: ${testargs}"
+
+      - name: Twister Run
+        run: |
+          ./zephyr/scripts/twister ${{ steps.twister-args.outputs.board_root }} \
+            ${{ steps.twister-args.outputs.outdir }} \
+            ${{ steps.twister-args.outputs.testsuite_root }} \
+            ${{ steps.twister-args.outputs.testargs }}
+
+      - name: Upload Build Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 7
+          name: ${{ inputs.twister-outdir }}-build-logs
+          path: |
+            ${{ inputs.twister-outdir }}/**/build.log
+
+      - name: Upload Binaries
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 7
+          name: ${{ inputs.twister-outdir }}-binaries
+          path: |
+            ${{ inputs.twister-outdir }}/**/*.bin
+            ${{ inputs.twister-outdir }}/**/*.elf
+            ${{ inputs.twister-outdir }}/**/*.hex
+            !${{ inputs.twister-outdir }}/**/zephyr_pre*.elf
+            !${{ inputs.twister-outdir }}/**/isrList.bin
+
+      - name: Check Twister Results
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@main
+        with:
+          twister-result-file: ${{ inputs.twister-outdir }}/twister.json
