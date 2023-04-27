@@ -7,6 +7,15 @@ import sys
 import os
 
 
+def gh_error(msg):
+    """Display error message in github action log."""
+    print(f"::error ::{msg}")
+
+def gh_notice(msg):
+    """Display error message in github action log."""
+    print(f"::notice ::{msg}")
+
+
 def md_report_header():
     """Return markdown array header for test configurations."""
     res = "| status | scenario | platform | failure reason |\n"
@@ -37,6 +46,25 @@ def md_report_test_config(test_config):
     return res
 
 
+def gh_log_report_test_config(test_config):
+    """Analyse one test config and display formatted log for github action."""
+    scenario = test_config['name']
+    platform = test_config['platform']
+    status = test_config['status']
+    if 'reason' in test_config:
+        reason = test_config['reason']
+    else:
+        reason = " "
+
+    msg = f"{status} : {scenario} {platform=} {reason}"
+    if status == 'error':
+        gh_error(msg)
+    elif status == 'passed':
+        print(msg)
+    else:
+        gh_notice(msg)
+
+
 def analyse_test_suite(testsuite, fd_out):
     """Analyse twister testsuite.
 
@@ -60,6 +88,7 @@ def analyse_test_suite(testsuite, fd_out):
     fd_out.write(md_report_header())
     for test_config in testsuite:
         fd_out.write(md_report_test_config(test_config))
+        gh_log_report_test_config(test_config)
 
     return success
 
