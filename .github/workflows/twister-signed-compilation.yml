@@ -23,7 +23,8 @@ on:
         default: "twister-out"
       tests-names:
         description: 'Space separated list of test case name to build'
-        required: true
+        required: false
+        default: ""
         type: string
       fallback-key-file:
         description: 'Key to use as fallback if signing-key is not available (action run from fork)'
@@ -150,9 +151,11 @@ jobs:
           echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" >> $GITHUB_OUTPUT
           echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
           testargs=""
-          for t in ${{ inputs.tests-names }}; do
-            testargs="${testargs} --test ${t}"
-          done
+          if [ -n "${{ inputs.tests-names }}" ]; then
+            for t in ${{ inputs.tests-names }}; do
+              testargs="${testargs} --test ${t}"
+            done
+          fi
           echo "testargs=${testargs}" >> $GITHUB_OUTPUT
           echo "testargs: ${testargs}"
 
