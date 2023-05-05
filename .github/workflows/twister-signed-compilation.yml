@@ -82,12 +82,6 @@ jobs:
         with:
           path: ${{ steps.repo-info.outputs.repo_name }}
 
-      - run: |
-          ls -l ${{ steps.repo-info.outputs.repo_name }}
-          echo "-------------"
-          ls -l ${{ steps.repo-info.outputs.repo_name }}/west.yml
-          echo "--- ${{ hashFiles(steps.repo-info.outputs.manifest) }}"
-
       - name: Cache West Module
         uses: actions/cache@v3
         id: cache
@@ -104,11 +98,6 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-
-      - name: debug
-        run: |
-          echo "dts h7"
-          ls ./modules/hal/stm32/dts/st/h7/
 
       - name: West Init
         run: |
