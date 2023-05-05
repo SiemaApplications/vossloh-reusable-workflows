@@ -72,6 +72,9 @@ jobs:
       matrix:
         mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaries-matrix) }}
     steps:
+      - name: install srec_cat
+        run: sudo apt-get install -y srecord
+
       - name: Get MCUboot binaries
         uses: actions/download-artifact@v3
         with:
