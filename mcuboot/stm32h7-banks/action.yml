@@ -79,7 +79,7 @@ runs:
       if: ${{ failure() }}
       run: |
         echo "## MCUboot for STM32 H7 Banks" >> ${GITHUB_STEP_SUMMARY}
-        if [ ${{ steps.which-srec-cat.outcome == 'failure' ]; then
+        if [ ${{ steps.which-srec-cat.outcome == 'failure' }} ]; then
           echo ":boom: `srec_cat` not available" >> ${GITHUB_STEP_SUMMARY}
         else
           echo "### Files produced" >> ${GITHUB_STEP_SUMMARY}
