@@ -11,6 +11,10 @@ This composite action parses `twister.json` file and report the result in the st
 Takes MCUboot binary for a specific board and produces `hex` files for each bank and a merged `hex` files which contains MCUboot for each bank.
 
 
+### debug/show-github-context
+Print some of the [github context properties](https://docs.github.com/en/actions/learn-github-actions/contexts#github-context) for debug purposes.
+Because this is a composite action some properties may relate to the composite action and not from the caller.
+
 ## Reusable Workflows
 ### Twister Signed Compilation
 `twister-signed-compilation.yml` compiles the requested application with the provided signing key.
