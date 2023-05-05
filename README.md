@@ -6,6 +6,11 @@ This repository hosts [composite action](https://docs.github.com/en/actions/crea
 ### twister/results-analysis
 This composite action parses `twister.json` file and report the result in the step summary.
 
+
+### mcuboot/stm32h7-banks
+Takes MCUboot binary for a specific board and produces `hex` files for each bank and a merged `hex` files which contains MCUboot for each bank.
+
+
 ## Reusable Workflows
 ### Twister Signed Compilation
 `twister-signed-compilation.yml` compiles the requested application with the provided signing key.
