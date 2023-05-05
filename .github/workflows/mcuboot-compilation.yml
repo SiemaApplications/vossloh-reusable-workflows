@@ -59,9 +59,9 @@ jobs:
       - name: Get Binaries
         id: binaries-matrix
         run: |
-          bins=$(find . -name 'zephyr.bin')
-          binaries_matrix="$(echo ${bins} | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          binaries_matrix="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
           echo "binaries_matrix=${binaries_matrix}" >> $GITHUB_OUTPUT
+          echo "binaries_matrix=${binaries_matrix}"
 
 
   sreccat:
