@@ -70,7 +70,7 @@ jobs:
     needs: get_mcuboot_bins
     strategy:
       matrix:
-        mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaires-matrix) }}
+        mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaries-matrix) }}
     steps:
       - name: Get MCUboot binaries
         uses: actions/download-artifact@v3
