@@ -31,7 +31,7 @@ on:
         required: true
 
 jobs:
-  mcuboot:
+  mcuboot_compil:
     uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@main
     with:
       app-dir: bootloader/mcuboot/boot/zephyr/
@@ -42,3 +42,49 @@ jobs:
       fallback-key-file: ${{ inputs.fallback-key-file }}
     secrets:
       signing-key: ${{ secrets.signing-key }}
+
+  get_mcuboot_bins:
+    needs: mcuboot_compil
+    name: MCUboot Binary Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      binaries-matrix: ${{ steps.binaries-matrix.outputs.binaries_matrix }}
+
+    steps:
+      - name: Get MCUboot binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.mcuboot_compil.outputs.binaries }}
+
+      - name: Get Binaries
+        id: binaries-matrix
+        run: |
+          bins=$(find . -name 'zephyr.bin')
+          binaries_matrix="$(echo ${bins} | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          echo "binaries_matrix=${binaries_matrix}" >> $GITHUB_OUTPUT
+
+
+  sreccat:
+    runs-on: ubuntu-latest
+    name: MCUboot files for stm32h7 banks
+    needs: get_mcuboot_bins
+    strategy:
+      matrix:
+        mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaires-matrix) }}
+    steps:
+      - name: Get MCUboot binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ needs.mcuboot_compil.outputs.binaries }}
+
+      - name: Get Board Name
+        id: board-name
+        run: |
+          board="$(echo ${{ matrix.mcuboot }} | cut -d '/' -f 2)"
+          echo "board=${board}" >> $GITHUB_OUTPUT
+
+      - name: MCUboot STM32 H7 banks
+        uses: SiemaApplications/vossloh-gh-actions/mcuboot/stm32h7-banks@main
+        with:
+          mcuboot-binfile: ${{ matrix.mcuboot }}
+          board-name: ${{ steps.board-name.outputs.board }}

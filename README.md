@@ -18,6 +18,7 @@ Takes MCUboot binary for a specific board and produces `hex` files for each bank
 ### MCUboot Compilation
 `mcuboot-compilation.yml` compiles MCUboot for the requested platform with the provided signing key.
 This workflows uses `twister-signed-compilation.yml` workflow.
+It uses `mcuboot/stm32h7-banks` to produce `hex` files for each bank of the stm32h7.
 
 ## Contributing
 Store Reusable workflows in `.github/workflows`, and each composite action in its own folder (nothing at the top level).
