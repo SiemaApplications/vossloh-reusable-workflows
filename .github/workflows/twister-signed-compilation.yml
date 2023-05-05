@@ -36,10 +36,23 @@ on:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
         required: true
 
+    outputs:
+      binaries:
+        description: 'Artifact name containing the binaries'
+        value: ${{ jobs.compile.artifacts-names.outputs.binaries }}
+
+      logs:
+        description: 'Artifact name containing the build logs'
+        value: ${{ jobs.compile.artifacts-names.outputs.logs }}
+
 jobs:
   compile:
     name: Twister Signed Compilation
     runs-on: ubuntu-latest
+    outputs:
+      binaries: ${{ steps.artifacts-names.outputs.binaries }}
+      logs: ${{ steps.artifacts-names.outputs.logs }}
+
     container:
       image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
       volumes:
@@ -55,6 +68,14 @@ jobs:
           echo "Repository Name: ${repo_name}"
           echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
           echo "manifest=${repo_name}/west.yml" >> $GITHUB_OUTPUT
+
+      - name: Get Artifacts Names
+        id: artifacts-names
+        run: |
+          binaries="${{ inputs.twister-outdir }}-binaries"
+          logs="${{ inputs.twister-outdir }}-build-logs"
+          echo "binaries=${binaries}" >> $GITHUB_OUTPUT
+          echo "logs=${logs}" >> $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -172,7 +193,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           retention-days: 7
-          name: ${{ inputs.twister-outdir }}-build-logs
+          name: ${{ steps.artifacts-names.outputs.logs }}
           path: |
             ${{ inputs.twister-outdir }}/**/build.log
 
@@ -180,7 +201,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           retention-days: 7
-          name: ${{ inputs.twister-outdir }}-binaries
+          name: ${{ steps.artifacts-names.outputs.binaries }}
           path: |
             ${{ inputs.twister-outdir }}/**/*.bin
             ${{ inputs.twister-outdir }}/**/*.elf
