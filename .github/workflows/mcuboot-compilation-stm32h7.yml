@@ -30,6 +30,21 @@ on:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware'
         required: true
 
+    outputs:
+      mcuboot-progfiles:
+        description: 'Artifact name containing mcuboot programming files for each bank.'
+        value: ${{ jobs.sreccat.outputs.artifact-name }}
+
+      binaries:
+        description: 'Artifact name containing binaires, retrieved from compilation job.'
+        value:  ${{ jobs.mcuboot_compil.outputs.binaries }}
+
+      logs:
+        description: 'Artifact name containing the build logs, retrieved from compilation job.'
+        value: ${{ jobs.mcuboot_compil.outputs.logs }}
+
+
+
 jobs:
   mcuboot_compil:
     uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@main
@@ -77,6 +92,9 @@ jobs:
     strategy:
       matrix:
         mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaries-matrix) }}
+    outputs:
+      artifact-name: ${{ steps.artifact-name.outputs.artifact_name }}
+
     steps:
       - name: install srec_cat
         run: sudo apt-get install -y srecord
@@ -99,11 +117,18 @@ jobs:
           mcuboot-binfile: ${{ matrix.mcuboot }}
           board-name: ${{ steps.board-name.outputs.board }}
 
+      - name: Artifact name
+        id: artifact-name
+        run: |
+          artifact_name=${{ steps.board-name.outputs.board }}-mcuboot-progfiles
+          echo "artifact_name=${artifact_name}"
+          echo "artifact_name=${artifact_name}" >> $GITHUB_OUTPUT
+
       - name: Upload MCUboot Binaries
         uses: actions/upload-artifact@v3
         with:
           retention-days: 7
-          name: ${{ steps.board-name.outputs.board }}-mcuboot-banks
+          name: ${{ steps.artifact-name.outputs.artifact_name }}
           path: |
             ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank1-hexfile }}
             ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank2-hexfile }}
