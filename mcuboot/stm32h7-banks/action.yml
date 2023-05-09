@@ -72,7 +72,12 @@ runs:
 
     # MD5 sum
     - shell: bash
-      run: md5sum ${{ steps.filenames.outputs.bank1_hex_file }} ${{ steps.filenames.outputs.bank2_hex_file }} ${{ steps.filenames.banks_hex_file }} ${{ steps.filenames.outputs.bin_file }} >> ${{ steps.filenames.outputs.md5sum_file }}
+      run: md5sum ${{ steps.filenames.outputs.bank1_hex_file }} ${{ steps.filenames.outputs.bank2_hex_file }} ${{ steps.filenames.outputs.banks_hex_file }} ${{ steps.filenames.outputs.bin_file }} >> ${{ steps.filenames.outputs.md5sum_file }}
+
+    # debug
+    - shell: bash
+      run: |
+        ls -l
 
     # Summary report
     - shell: bash
