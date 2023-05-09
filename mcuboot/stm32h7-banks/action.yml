@@ -15,19 +15,19 @@ inputs:
 outputs:
   mcuboot-bank1-hexfile:
     description: 'Hex file containing MCUboot for bank 1.'
-    value: ${{ steps.filenames.outputs.bank1_hex_name }}
+    value: ${{ steps.filenames.outputs.bank1_hex_file }}
 
   mcuboot-bank2-hexfile:
     description: 'Hex file containing MCUboot for bank 2.'
-    value: ${{ steps.filenames.outputs.bank2_hex_name }}
+    value: ${{ steps.filenames.outputs.bank2_hex_file }}
 
   mcuboot-banks-hexfile:
     description: 'Hex files containing MCUboot for both banks.'
-    value: ${{ steps.filenames.outputs.banks_hex_name }}
+    value: ${{ steps.filenames.outputs.banks_hex_file }}
 
   mcuboot-binfile:
     description: 'Binary file containing MCUboot, this is the same file as the input but with a meaningfull name (eg: <board-name>_mcuboot.bin)'
-    value: ${{ steps.filenames.outputs.bin_name }}
+    value: ${{ steps.filenames.outputs.bin_file }}
 
   md5sum-file:
     description: 'MD5SUM file containing the md5 sum of each output file.'
@@ -44,35 +44,35 @@ runs:
     - shell: bash
       id: filenames
       run: |
-        bank1_hex_name="${{ inputs.board-name }}_mcuboot_bank1.hex"
-        bank2_hex_name="${{ inputs.board-name }}_mcuboot_bank2.hex"
-        banks_hex_name="${{ inputs.board-name }}_mcuboot_banks.hex"
-        bin_name="${{ inputs.board-name }}_mcuboot.bin"
-        echo "bank1_hex_name=${bank1_hex_name}" >> $GITHUB_OUTPUT
-        echo "bank2_hex_name=${bank2_hex_name}" >> $GITHUB_OUTPUT
-        echo "banks_hex_name=${banks_hex_name}" >> $GITHUB_OUTPUT
-        echo "bin_name=${bin_name}" >> $GITHUB_OUTPUT
+        bank1_hex_file="${{ inputs.board-name }}_mcuboot_bank1.hex"
+        bank2_hex_file="${{ inputs.board-name }}_mcuboot_bank2.hex"
+        banks_hex_file="${{ inputs.board-name }}_mcuboot_banks.hex"
+        bin_file="${{ inputs.board-name }}_mcuboot.bin"
+        echo "bank1_hex_file=${bank1_hex_file}" >> $GITHUB_OUTPUT
+        echo "bank2_hex_file=${bank2_hex_file}" >> $GITHUB_OUTPUT
+        echo "banks_hex_file=${banks_hex_file}" >> $GITHUB_OUTPUT
+        echo "bin_file=${bin_file}" >> $GITHUB_OUTPUT
         echo "md5sum_file=MD5SUM" >> $GITHUB_OUTPUT
 
     # Hex file with MCUboot in Bank 1
     - shell: bash
-      run: srec_cat ${{ inputs.mcuboot-binfile }} -binary -offset 0x08000000 -Output ${{ steps.filenames.outputs.bank1_hex_name }} -Intel
+      run: srec_cat ${{ inputs.mcuboot-binfile }} -binary -offset 0x08000000 -Output ${{ steps.filenames.outputs.bank1_hex_file }} -Intel
 
     # Hex file with MCUboot in Bank 2
     - shell: bash
-      run: srec_cat ${{ inputs.mcuboot-binfile }} -binary -offset 0x08100000 -Output ${{ steps.filenames.outputs.bank2_hex_name }} -Intel
+      run: srec_cat ${{ inputs.mcuboot-binfile }} -binary -offset 0x08100000 -Output ${{ steps.filenames.outputs.bank2_hex_file }} -Intel
 
     # Hex file with MCUboot in both banks
     - shell: bash
-      run: srec_cat ${{ steps.filenames.outputs.bank1_hex_name }} -Intel ${{ steps.filenames.outputs.bank2_hex_name }} -Intel -Output ${{ steps.filenames.outputs.banks_hex_name }} -Intel
+      run: srec_cat ${{ steps.filenames.outputs.bank1_hex_file }} -Intel ${{ steps.filenames.outputs.bank2_hex_file }} -Intel -Output ${{ steps.filenames.outputs.banks_hex_file }} -Intel
 
     # Binary file with MCUboot properly named
     - shell: bash
-      run: cp ${{ inputs.mcuboot-binfile }} ${{ steps.filenames.outputs.bin_name }}
+      run: cp ${{ inputs.mcuboot-binfile }} ${{ steps.filenames.outputs.bin_file }}
 
     # MD5 sum
     - shell: bash
-      run: md5sum ${{ steps.filenames.outputs.bank1_hex_name }} ${{ steps.filenames.outputs.bank2_hex_name }} ${{ steps.filenames.banks_hex_name }} ${{ steps.filenames.outputs.bin_name }} >> ${{ steps.filenames.outputs.md5sum_file }}
+      run: md5sum ${{ steps.filenames.outputs.bank1_hex_file }} ${{ steps.filenames.outputs.bank2_hex_file }} ${{ steps.filenames.banks_hex_file }} ${{ steps.filenames.outputs.bin_file }} >> ${{ steps.filenames.outputs.md5sum_file }}
 
     # Summary report
     - shell: bash
@@ -84,10 +84,10 @@ runs:
           echo ":boom: \`srec_cat\` not available" >> ${GITHUB_STEP_SUMMARY}
         else
           echo "### Files produced" >> ${GITHUB_STEP_SUMMARY}
-          echo "- \`${{ steps.filenames.outputs.bank1_hex_name }}\`: MCUboot located in bank1" >> ${GITHUB_STEP_SUMMARY}
-          echo "- \`${{ steps.filenames.outputs.bank2_hex_name }}\`: MCUboot located in bank2" >> ${GITHUB_STEP_SUMMARY}
-          echo "- \`${{ steps.filenames.outputs.banks_hex_name }}\`: MCUboot located in both banks" >> ${GITHUB_STEP_SUMMARY}
-          echo "- \`${{ steps.filenames.outputs.bin_name }}\`: MCUboot binary file" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bank1_hex_file }}\`: MCUboot located in bank1" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bank2_hex_file }}\`: MCUboot located in bank2" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.banks_hex_file }}\`: MCUboot located in both banks" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bin_file }}\`: MCUboot binary file" >> ${GITHUB_STEP_SUMMARY}
           echo "- \`${{ steps.filenames.outputs.md5sum_file }}\`: md5 sum of above files." >> ${GITHUB_STEP_SUMMARY}
           echo "" >> ${GITHUB_STEP_SUMMARY}
 
