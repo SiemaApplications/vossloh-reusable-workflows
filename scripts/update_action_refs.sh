@@ -10,7 +10,7 @@ help() {
     echo "Update SHA1 references in yaml workflow files."
     echo ""
     echo "    action sha1"
-    echo "        sha1 to update to.
+    echo "        sha1 to update to."
     echo "    -h"
     echo "    --help"
     echo "        Display this help and exit."

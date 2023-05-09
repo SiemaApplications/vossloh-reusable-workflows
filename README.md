@@ -20,7 +20,7 @@ Because this is a composite action some properties may relate to the composite a
 `twister-signed-compilation.yml` compiles the requested application with the provided signing key.
 
 ### MCUboot Compilation
-`mcuboot-compilation.yml` compiles MCUboot for the requested platform with the provided signing key.
+`mcuboot-compilation-stm32h7.yml` compiles MCUboot for the requested platform with the provided signing key.
 This workflows uses `twister-signed-compilation.yml` workflow.
 It uses `mcuboot/stm32h7-banks` to produce `hex` files for each bank of the stm32h7.
 
