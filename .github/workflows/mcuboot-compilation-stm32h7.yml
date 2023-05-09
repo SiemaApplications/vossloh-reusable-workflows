@@ -93,7 +93,20 @@ jobs:
           echo "board=${board}" >> $GITHUB_OUTPUT
 
       - name: MCUboot STM32 H7 banks
+        id: mcuboot-stm32h7-banks
         uses: SiemaApplications/vossloh-gh-actions/mcuboot/stm32h7-banks@main
         with:
           mcuboot-binfile: ${{ matrix.mcuboot }}
           board-name: ${{ steps.board-name.outputs.board }}
+
+      - name: Upload MCUboot Binaries
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 7
+          name: ${{ steps.board-name.outputs.board }}-mcuboot-banks
+          path: |
+            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank1-hexfile }}
+            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank2-hexfile }}
+            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-banks-hexfile }}
+            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-binfile }}
+            ${{ steps.mcuboot-stm32h7-banks.outputs.md5sum-file }}
