@@ -14,3 +14,9 @@ repos:
       - id: check-github-actions
         files: ^.*action.ya?ml$
       - id: check-github-workflows
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: main
+    hooks:
+      - id: actionlint-docker
+        args: [-shellcheck=]

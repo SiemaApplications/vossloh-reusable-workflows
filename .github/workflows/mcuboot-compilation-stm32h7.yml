@@ -71,7 +71,9 @@ jobs:
   sreccat:
     runs-on: ubuntu-latest
     name: MCUboot files for stm32h7 banks
-    needs: get_mcuboot_bins
+    needs:
+      - mcuboot_compil
+      - get_mcuboot_bins
     strategy:
       matrix:
         mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaries-matrix) }}

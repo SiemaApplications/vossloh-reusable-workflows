@@ -39,11 +39,11 @@ on:
     outputs:
       binaries:
         description: 'Artifact name containing the binaries'
-        value: ${{ jobs.compile.artifacts-names.outputs.binaries }}
+        value: ${{ jobs.compile.outputs.binaries }}
 
       logs:
         description: 'Artifact name containing the build logs'
-        value: ${{ jobs.compile.artifacts-names.outputs.logs }}
+        value: ${{ jobs.compile.outputs.logs }}
 
 jobs:
   compile:
