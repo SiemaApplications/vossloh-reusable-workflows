@@ -76,9 +76,9 @@ runs:
 
     # Summary report
     - shell: bash
-      if: ${{ failure() }}
+      if: ${{ failure() }} || ${{ success() }}
       run: |
-        echo "## MCUboot for STM32 H7 Banks" >> ${GITHUB_STEP_SUMMARY}
+        echo "## MCUboot for STM32 H7 Banks on ${{ inputs.board-name }}" >> ${GITHUB_STEP_SUMMARY}
         if [ ${{ steps.which-srec-cat.outcome == 'failure' }} ]; then
           echo ":boom: \`srec_cat\` not available" >> ${GITHUB_STEP_SUMMARY}
         else
