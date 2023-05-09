@@ -84,15 +84,15 @@ runs:
           echo ":boom: \`srec_cat\` not available" >> ${GITHUB_STEP_SUMMARY}
         else
           echo "### Files produced" >> ${GITHUB_STEP_SUMMARY}
-          echo "- `${{ steps.filenames.outputs.bank1_hex_name }}`: MCUboot located in bank1" >> ${GITHUB_STEP_SUMMARY}
-          echo "- `${{ steps.filenames.outputs.bank2_hex_name }}`: MCUboot located in bank2" >> ${GITHUB_STEP_SUMMARY}
-          echo "- `${{ steps.filenames.outputs.banks_hex_name }}`: MCUboot located in both banks" >> ${GITHUB_STEP_SUMMARY}
-          echo "- `${{ steps.filenames.outputs.bin_name }}`: MCUboot binary file" >> ${GITHUB_STEP_SUMMARY}
-          echo "- `${{ steps.filenames.outputs.md5sum_file }}`: md5 sum of above files." >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bank1_hex_name }}\`: MCUboot located in bank1" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bank2_hex_name }}\`: MCUboot located in bank2" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.banks_hex_name }}\`: MCUboot located in both banks" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.bin_name }}\`: MCUboot binary file" >> ${GITHUB_STEP_SUMMARY}
+          echo "- \`${{ steps.filenames.outputs.md5sum_file }}\`: md5 sum of above files." >> ${GITHUB_STEP_SUMMARY}
           echo "" >> ${GITHUB_STEP_SUMMARY}
 
           echo "### MD5 sums" >> ${GITHUB_STEP_SUMMARY}
-          echo "```" >> ${GITHUB_STEP_SUMMARY}
+          echo "\`\`\`" >> ${GITHUB_STEP_SUMMARY}
           cat ${{ steps.filenames.outputs.md5sum_file }} >> ${GITHUB_STEP_SUMMARY}
-          echo "```" >> ${GITHUB_STEP_SUMMARY}
+          echo "\`\`\`" >> ${GITHUB_STEP_SUMMARY}
         fi
