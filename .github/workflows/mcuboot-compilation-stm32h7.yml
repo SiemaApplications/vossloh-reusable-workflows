@@ -51,6 +51,10 @@ jobs:
       binaries-matrix: ${{ steps.binaries-matrix.outputs.binaries_matrix }}
 
     steps:
+      - name: dbg artifcat name
+        run: |
+          echo "${{ needs.mcuboot_compil.outputs.binaries }}"
+
       - name: Get MCUboot binaries
         uses: actions/download-artifact@v3
         with:

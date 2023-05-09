@@ -74,6 +74,8 @@ jobs:
         run: |
           binaries="${{ inputs.twister-outdir }}-binaries"
           logs="${{ inputs.twister-outdir }}-build-logs"
+          echo "binaries=${binaries}"
+          echo "logs=${logs}"
           echo "binaries=${binaries}" >> $GITHUB_OUTPUT
           echo "logs=${logs}" >> $GITHUB_OUTPUT
 
