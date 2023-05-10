@@ -33,7 +33,7 @@ on:
     outputs:
       mcuboot-progfiles:
         description: 'Artifact name containing mcuboot programming files for each bank.'
-        value: ${{ jobs.matrix_input.outputs.artifacts-names }}
+        value: ${{ jobs.sreccat.outputs.artifacts-names }}
 
       binaries:
         description: 'Artifact name containing binaires, retrieved from compilation job.'
@@ -57,48 +57,18 @@ jobs:
     secrets:
       signing-key: ${{ secrets.signing-key }}
 
-  matrix_input:
-    needs: mcuboot_compil
-    name: MCUboot Binary Matrix
-    runs-on: ubuntu-latest
-    outputs:
-      binaries-matrix: ${{ steps.binaries-matrix.outputs.binaries_matrix }}
-      artifacts-names: ${{ steps.binaries-matrix.outputs.artifacts_names }}
-      boards: ${{ steps.binaries-matrix.outputs.boards }}
-
-    steps:
-      - name: Get MCUboot binaries
-        uses: actions/download-artifact@v3
-        with:
-          name: ${{ needs.mcuboot_compil.outputs.binaries }}
-
-      - name: Get Binaries
-        id: binaries-matrix
-        run: |
-          binaries="$(find . -name 'zephyr.bin')"
-          binaries_matrix="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
-          boards=""
-          for binary in ${binaries}; do
-            boards="${boards} $(echo ${binary} | cut -d '/' -f 2)"
-          done
-          artifacts_names=""
-          for board in ${boards}; do
-            artifacts_names="${artifacts_names} ${board}-mcuboot-progfiles"
-          done
-          echo "binaries_matrix=${binaries_matrix}" | tee -a $GITHUB_OUTPUT
-          echo "boards=${boards}" | tee -a $GITHUB_OUTPUT
-          echo "artifacts_names=${artifacts_names}" | tee -a $GITHUB_OUTPUT
-
-
   sreccat:
     runs-on: ubuntu-latest
     name: MCUboot files for stm32h7 banks
     needs:
       - mcuboot_compil
-      - matrix_input
     strategy:
       matrix:
-        mcuboot: ${{ fromJson(needs.matrix_input.outputs.binaries-matrix) }}
+        mcuboot: ${{ fromJson(needs.mcuboot_compil.outputs.binary-list) }}
+    env:
+      ARTIFACT_SUFFIX: '-mcuboot-progfiles'
+    outputs:
+      artifacts-names: ${{ steps.matrix-artifacts-names.outputs.artifacts }}
 
     steps:
       - name: install srec_cat
@@ -125,9 +95,25 @@ jobs:
       - name: Artifact name
         id: artifact-name
         run: |
-          artifact_name=${{ steps.board-name.outputs.board }}-mcuboot-progfiles
+          artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_SUFFIX}
           echo "artifact_name=${artifact_name}"
           echo "artifact_name=${artifact_name}" >> $GITHUB_OUTPUT
+
+      # It is not yet possible to get each output of matrix jobs
+      # https://github.com/actions/runner/pull/2477
+      # Although the PR is merged in, some server side dev is required and the team responsible for this have been fired
+      # https://github.com/actions/runner/pull/2477#issuecomment-1501003600
+      # This steps compute artifacts names across the job matrix.
+      - name: Artifacts Names across Matrix
+        id: matrix-artifacts-names
+        run: |
+          artifacts=""
+          for binary in $(echo ${{ needs.mcuboot_compil.outputs.binary-list }} | jq -r '.[]'); do
+            board="$(echo ${binary} | cut -d '/' -f 2)"
+            artifact_name="${board}${ARTIFACT_SUFFIX}"
+            artifacts="${artifacts} ${artifact_name}"
+          done
+          echo "artifacts=${artifacts}" | tee -a $GITHUB_OUTPUT
 
       - name: Upload MCUboot Binaries
         uses: actions/upload-artifact@v3
