@@ -74,16 +74,6 @@ jobs:
           echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
           echo "manifest=${repo_name}/west.yml" >> $GITHUB_OUTPUT
 
-      - name: Compute Job Outputs
-        id: jobs-outputs
-        run: |
-          binaries="${{ inputs.twister-outdir }}-binaries"
-          logs="${{ inputs.twister-outdir }}-build-logs"
-          binary_list="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
-          echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
-          echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
-          echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -180,6 +170,16 @@ jobs:
             ${{ steps.twister-args.outputs.outdir }} \
             ${{ steps.twister-args.outputs.testsuite_root }} \
             ${{ steps.twister-args.outputs.testargs }}
+
+      - name: Compute Job Outputs
+        id: jobs-outputs
+        run: |
+          binaries="${{ inputs.twister-outdir }}-binaries"
+          logs="${{ inputs.twister-outdir }}-build-logs"
+          binary_list="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
+          echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
+          echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
 
       - name: Upload Build Logs
         if: always()
