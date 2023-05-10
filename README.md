@@ -27,6 +27,15 @@ It uses `mcuboot/stm32h7-banks` to produce `hex` files for each bank of the stm3
 ## Contributing
 Store Reusable workflows in `.github/workflows`, and each composite action in its own folder (nothing at the top level).
 
+Due to dependencies between reusable worklows and a composite action, pinning to sha1 references is a real pain (if not impossible). Therefore actions are pinned to a tag which is more stable than a branch name.
+While developping a new action, it is recommended to work from a branch and reference that branch, when the action is ready and merged to main, the tag can be moved (as long as compatibility is maintained):
+
+```
+git tag -d v1
+git tag v1
+git push --tags --force
+```
+
 ### Commit hooks
 Install `pre-commit` to check the syntax of the actions and workflows files:
 ```
