@@ -129,9 +129,6 @@ jobs:
           ls -l ${{ inputs.key-file }}
           echo "md5 of ${{ inputs.key-file }}"
           md5sum ${{ inputs.key-file }}
-          echo "md5 of secret"
-          echo ${{ secrets.signing-key }} | md5sum
-          echo ${{ secrets.signing-key }} | wc -l
           keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
           echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
 
