@@ -58,7 +58,7 @@ jobs:
       volumes:
         # When using a custom container, the path of the individuals composite action is not mounted into the target container and needs to be manually provided.
         # See https://github.com/orgs/community/discussions/53771
-        - /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis:/home/runner/work/_actions/SiemaApplications/vossloh-gh-actions/main/twister/results-analysis
+        - /home/runner/work/_actions/SiemaApplications/vossloh-gh-actions:/home/runner/work/_actions/SiemaApplications/vossloh-gh-actions
     steps:
       - name: Get Repository Name
         id: repo-info
