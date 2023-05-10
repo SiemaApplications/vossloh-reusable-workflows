@@ -33,7 +33,7 @@ on:
     outputs:
       mcuboot-progfiles:
         description: 'Artifact name containing mcuboot programming files for each bank.'
-        value: ${{ jobs.sreccat.outputs.artifact-name }}
+        value: ${{ jobs.matrix_input.outputs.artifacts-names }}
 
       binaries:
         description: 'Artifact name containing binaires, retrieved from compilation job.'
@@ -42,7 +42,6 @@ on:
       logs:
         description: 'Artifact name containing the build logs, retrieved from compilation job.'
         value: ${{ jobs.mcuboot_compil.outputs.logs }}
-
 
 
 jobs:
@@ -58,18 +57,16 @@ jobs:
     secrets:
       signing-key: ${{ secrets.signing-key }}
 
-  get_mcuboot_bins:
+  matrix_input:
     needs: mcuboot_compil
     name: MCUboot Binary Matrix
     runs-on: ubuntu-latest
     outputs:
       binaries-matrix: ${{ steps.binaries-matrix.outputs.binaries_matrix }}
+      artifacts-names: ${{ steps.binaries-matrix.outputs.artifacts_names }}
+      boards: ${{ steps.binaries-matrix.outputs.boards }}
 
     steps:
-      - name: dbg artifcat name
-        run: |
-          echo "${{ needs.mcuboot_compil.outputs.binaries }}"
-
       - name: Get MCUboot binaries
         uses: actions/download-artifact@v3
         with:
@@ -79,8 +76,17 @@ jobs:
         id: binaries-matrix
         run: |
           binaries_matrix="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
-          echo "binaries_matrix=${binaries_matrix}" >> $GITHUB_OUTPUT
-          echo "binaries_matrix=${binaries_matrix}"
+          boards=""
+          for binary in ${binaries_matrix}; do
+            boards="${boards} $(echo ${binary} | cut -d '/' -f 2)"
+          done
+          artifacts_names=""
+          for board in ${boards}; do
+            artifacts_names="${artifacts_names} ${board}-mcuboot-progfiles"
+          done
+          echo "binaries_matrix=${binaries_matrix}" | tee -a $GITHUB_OUTPUT
+          echo "boards=${boards}" | tee -a $GITHUB_OUTPUT
+          echo "artifacts_names=${artifacts_names}" | tee -a $GITHUB_OUTPUT
 
 
   sreccat:
@@ -88,12 +94,10 @@ jobs:
     name: MCUboot files for stm32h7 banks
     needs:
       - mcuboot_compil
-      - get_mcuboot_bins
+      - matrix_input
     strategy:
       matrix:
-        mcuboot: ${{ fromJson(needs.get_mcuboot_bins.outputs.binaries-matrix) }}
-    outputs:
-      artifact-name: ${{ steps.artifact-name.outputs.artifact_name }}
+        mcuboot: ${{ fromJson(needs.matrix_input.outputs.binaries-matrix) }}
 
     steps:
       - name: install srec_cat
