@@ -16,7 +16,7 @@ repos:
       - id: check-github-workflows
 
   - repo: https://github.com/rhysd/actionlint
-    rev: main
+    rev: v1.6.24
     hooks:
       - id: actionlint-docker
         args: [-shellcheck=]
