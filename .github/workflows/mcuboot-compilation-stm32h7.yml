@@ -76,8 +76,15 @@ jobs:
 
       - name: Get MCUboot binaries
         uses: actions/download-artifact@v3
+        id: download
         with:
           name: ${{ needs.mcuboot_compil.outputs.binaries }}
+
+      - name: ':toolbox: Show artifacts'
+        run: |
+          find ${{ steps.download.outputs.download-path }}
+          echo "---------"
+          echo "This job process ${{ matrix.mcuboot }}"
 
       - name: Get Board Name
         id: board-name
