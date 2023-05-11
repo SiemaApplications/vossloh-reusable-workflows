@@ -41,7 +41,7 @@ on:
         description: 'Artifact name containing the binaries'
         value: ${{ jobs.compile.outputs.binaries }}
 
-      binary_list:
+      binary-list:
         description: 'Json list of binary files produced by this job.'
         value: ${{ jobs.compile.outputs.binary-list }}
 
