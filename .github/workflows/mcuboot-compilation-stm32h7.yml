@@ -82,7 +82,7 @@ jobs:
 
       - name: ':toolbox: Show artifacts'
         run: |
-          find ${{ steps.download.outputs.download-path }}
+          find .
           echo "---------"
           echo "This job process ${{ matrix.mcuboot }}"
 
