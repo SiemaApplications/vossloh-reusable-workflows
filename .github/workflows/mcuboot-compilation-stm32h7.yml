@@ -125,7 +125,8 @@ jobs:
       - name: Upload MCUboot Binaries
         uses: actions/upload-artifact@v3
         with:
-          retention-days: 7
+          # We don't care of the binaries after the run
+          retention-days: 1
           name: ${{ steps.artifact-name.outputs.artifact_name }}
           path: |
             ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank1-hexfile }}
