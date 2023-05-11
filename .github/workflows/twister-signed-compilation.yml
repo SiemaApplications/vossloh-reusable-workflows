@@ -41,6 +41,10 @@ on:
         description: 'Artifact name containing the binaries'
         value: ${{ jobs.compile.outputs.binaries }}
 
+      binary-list:
+        description: 'Json list of binary files produced by this job.'
+        value: ${{ jobs.compile.outputs.binary-list }}
+
       logs:
         description: 'Artifact name containing the build logs'
         value: ${{ jobs.compile.outputs.logs }}
@@ -50,8 +54,9 @@ jobs:
     name: Twister Signed Compilation
     runs-on: ubuntu-latest
     outputs:
-      binaries: ${{ steps.artifacts-names.outputs.binaries }}
-      logs: ${{ steps.artifacts-names.outputs.logs }}
+      binaries: ${{ steps.jobs-outputs.outputs.binaries }}
+      binary-list: ${{ steps.jobs-outputs.outputs.binary_list }}
+      logs: ${{ steps.jobs-outputs.outputs.logs }}
 
     container:
       image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
@@ -68,16 +73,6 @@ jobs:
           echo "Repository Name: ${repo_name}"
           echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
           echo "manifest=${repo_name}/west.yml" >> $GITHUB_OUTPUT
-
-      - name: Get Artifacts Names
-        id: artifacts-names
-        run: |
-          binaries="${{ inputs.twister-outdir }}-binaries"
-          logs="${{ inputs.twister-outdir }}-build-logs"
-          echo "binaries=${binaries}"
-          echo "logs=${logs}"
-          echo "binaries=${binaries}" >> $GITHUB_OUTPUT
-          echo "logs=${logs}" >> $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -129,9 +124,6 @@ jobs:
           ls -l ${{ inputs.key-file }}
           echo "md5 of ${{ inputs.key-file }}"
           md5sum ${{ inputs.key-file }}
-          echo "md5 of secret"
-          echo ${{ secrets.signing-key }} | md5sum
-          echo ${{ secrets.signing-key }} | wc -l
           keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
           echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
 
@@ -179,20 +171,32 @@ jobs:
             ${{ steps.twister-args.outputs.testsuite_root }} \
             ${{ steps.twister-args.outputs.testargs }}
 
+      - name: Compute Job Outputs
+        id: jobs-outputs
+        run: |
+          cd ${{ inputs.twister-outdir }}
+          binaries="${{ inputs.twister-outdir }}-binaries"
+          logs="${{ inputs.twister-outdir }}-build-logs"
+          binary_list="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
+          echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
+          echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
+
       - name: Upload Build Logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           retention-days: 7
-          name: ${{ steps.artifacts-names.outputs.logs }}
+          name: ${{ steps.jobs-outputs.outputs.logs }}
           path: |
             ${{ inputs.twister-outdir }}/**/build.log
 
       - name: Upload Binaries
         uses: actions/upload-artifact@v3
         with:
-          retention-days: 7
-          name: ${{ steps.artifacts-names.outputs.binaries }}
+          # We don't care of the binaries after the run
+          retention-days: 1
+          name: ${{ steps.jobs-outputs.outputs.binaries }}
           path: |
             ${{ inputs.twister-outdir }}/**/*.bin
             ${{ inputs.twister-outdir }}/**/*.elf
@@ -201,6 +205,6 @@ jobs:
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v1
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@fix_matrix_output
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json
