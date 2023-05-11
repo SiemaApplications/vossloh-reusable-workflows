@@ -80,7 +80,7 @@ jobs:
         with:
           name: ${{ needs.mcuboot_compil.outputs.binaries }}
 
-      - name: ':toolbox: Show artifacts'
+      - name: 'Show artifacts'
         run: |
           find .
           echo "---------"
@@ -115,7 +115,7 @@ jobs:
         id: matrix-artifacts-names
         run: |
           artifacts=""
-          for binary in $(echo ${{ needs.mcuboot_compil.outputs.binary-list }} | jq -r '.[]'); do
+          for binary in $(echo '${{ needs.mcuboot_compil.outputs.binary-list }}' | jq -r '.[]'); do
             board="$(echo ${binary} | cut -d '/' -f 2)"
             artifact_name="${board}${ARTIFACT_SUFFIX}"
             artifacts="${artifacts} ${artifact_name}"
