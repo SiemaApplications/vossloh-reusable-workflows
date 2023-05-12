@@ -90,7 +90,7 @@ jobs:
         id: board-name
         run: |
           board="$(echo ${{ matrix.mcuboot }} | cut -d '/' -f 2)"
-          echo "board=${board}" >> $GITHUB_OUTPUT
+          echo "board=${board}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
 
       - name: MCUboot STM32 H7 banks
         id: mcuboot-stm32h7-banks
@@ -99,12 +99,20 @@ jobs:
           mcuboot-binfile: ${{ matrix.mcuboot }}
           board-name: ${{ steps.board-name.outputs.board }}
 
+      - name: Rename Elf
+        id: rename-elf
+        run: |
+          bin=${{ matrix.mcuboot }}
+          elf="${bin%%.bin}.elf"
+          elf_target="${board}_mcuboot.elf"
+          cp ${elf} ${elf_target}
+          echo "mcuboot_elf=${elf_target}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+
       - name: Artifact name
         id: artifact-name
         run: |
           artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_SUFFIX}
-          echo "artifact_name=${artifact_name}"
-          echo "artifact_name=${artifact_name}" >> $GITHUB_OUTPUT
+          echo "artifact_name=${artifact_name}" |tee $GITHUB_OUTPUT
 
       # It is not yet possible to get each output of matrix jobs
       # https://github.com/actions/runner/pull/2477
@@ -129,8 +137,7 @@ jobs:
           retention-days: 1
           name: ${{ steps.artifact-name.outputs.artifact_name }}
           path: |
-            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank1-hexfile }}
-            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-bank2-hexfile }}
+            ${{ env.mcuboot_elf }}
             ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-banks-hexfile }}
             ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-binfile }}
             ${{ steps.mcuboot-stm32h7-banks.outputs.md5sum-file }}
