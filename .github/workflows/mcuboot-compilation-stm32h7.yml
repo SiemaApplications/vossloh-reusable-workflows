@@ -24,6 +24,11 @@ on:
         description: 'Key to use as fallback if signing-key is not available (action run from fork)'
         required: false
         type: string
+      artifact-suffix:
+        description: 'Suffix applied to artifact when this job is called multiple times with same tests-names but different inputs'
+        required: false
+        type: string
+        default: ""
 
     secrets:
       signing-key:
@@ -66,7 +71,7 @@ jobs:
       matrix:
         mcuboot: ${{ fromJson(needs.mcuboot_compil.outputs.binary-list) }}
     env:
-      ARTIFACT_SUFFIX: '-mcuboot-progfiles'
+      ARTIFACT_INFIX: '-mcuboot-progfiles'
     outputs:
       artifacts-names: ${{ steps.matrix-artifacts-names.outputs.artifacts }}
 
@@ -111,7 +116,7 @@ jobs:
       - name: Artifact name
         id: artifact-name
         run: |
-          artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_SUFFIX}
+          artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_INFIX}${{ inputs.artifact-suffix }}
           echo "artifact_name=${artifact_name}" |tee $GITHUB_OUTPUT
 
       # It is not yet possible to get each output of matrix jobs
@@ -125,7 +130,7 @@ jobs:
           artifacts=""
           for binary in $(echo '${{ needs.mcuboot_compil.outputs.binary-list }}' | jq -r '.[]'); do
             board="$(echo ${binary} | cut -d '/' -f 2)"
-            artifact_name="${board}${ARTIFACT_SUFFIX}"
+            artifact_name="${board}${ARTIFACT_INFIX}${{ inputs.artifact-suffix }}"
             artifacts="${artifacts} ${artifact_name}"
           done
           echo "artifacts=${artifacts}" | tee -a $GITHUB_OUTPUT
