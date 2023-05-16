@@ -17,6 +17,10 @@ on:
         description: 'Path to custom boards directory passed to --board-root option'
         required: false
         type: string
+      boards:
+        description: 'Space separated list of boards to build for'
+        required: false
+        type: string
       key-file:
         description: 'Path where content of secret signing key is stored'
         required: true
@@ -43,6 +47,10 @@ on:
         description: 'Application Name of the project'
         required: true
         type: string
+      integration:
+        description: 'Runs twister with --integration flag'
+        type: boolean
+        default: true
 
     secrets:
       signing-key:
@@ -87,10 +95,12 @@ jobs:
     with:
       app-dir: ${{ inputs.app-dir }}
       board-root-dir: ${{ inputs.board-root-dir }}
+      boards: ${{ inputs.boards }}
       key-file: ${{ inputs.key-file }}
       twister-outdir: ${{ inputs.twister-outdir }}
       tests-names: ${{ inputs.tests-names }}
       fallback-key-file: ${{ inputs.fallback-key-file }}
       app-version: ${{ needs.release_infos.outputs.semver }}
+      integration: ${{ inputs.integration }}
     secrets:
       signing-key: ${{ secrets.signing-key }}
