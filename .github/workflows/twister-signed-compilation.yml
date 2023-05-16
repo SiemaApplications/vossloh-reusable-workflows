@@ -12,6 +12,10 @@ on:
         description: 'Path to custom boards directory passed to --board-root option'
         required: false
         type: string
+      boards:
+        description: 'Space separated list of boards to build for'
+        required: false
+        type: string
       key-file:
         description: 'Path where content of secret signing key is stored'
         required: true
@@ -165,6 +169,13 @@ jobs:
               testargs="${testargs} --test ${t}"
             done
           fi
+          platformargs=""
+          if [ -n "${{inputs.boards}}" ]; then
+            for b in ${{inputs.boards}}; do
+              platformargs="${platformargs} --platform ${b}"
+            done
+          fi
+          echo "platformargs=${platformargs}" | tee -a $GITHUB_ENV
           echo "testargs=${testargs}" >> $GITHUB_OUTPUT
           echo "testargs: ${testargs}"
 
