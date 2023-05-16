@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: ""
+      integration:
+        description: 'Runs twister with --integration flag'
+        type: boolean
+        default: true
+
 
     secrets:
       signing-key:
@@ -156,6 +161,11 @@ jobs:
       - name: Twister args
         id: twister-args
         run: |
+          if [ "${{ inputs.integration }}" == "true" ]; then
+            echo "integration=--integration" | tee -a $GITHUB_ENV
+          else
+            echo "integration=" | tee -a $GITHUB_ENV
+          fi
           if [ -n "${{ inputs.board-root-dir }}" ]; then
             echo "board_root=--board-root ${{ inputs.board-root-dir }}" | tee -a $GITHUB_ENV
           else
@@ -181,7 +191,7 @@ jobs:
       - name: Twister Run
         run: |
           ./zephyr/scripts/twister ${board_root} \
-            --integration \
+            ${integration} \
             ${outdir} \
             ${testsuite_root} \
             ${testargs} \
