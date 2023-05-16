@@ -51,7 +51,7 @@ on:
 
 jobs:
   mcuboot_compil:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v1
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@twister-sign-binaries
     with:
       app-dir: bootloader/mcuboot/boot/zephyr/
       board-root-dir: ${{ inputs.board-root-dir }}
@@ -99,7 +99,7 @@ jobs:
 
       - name: MCUboot STM32 H7 banks
         id: mcuboot-stm32h7-banks
-        uses: SiemaApplications/vossloh-gh-actions/mcuboot/stm32h7-banks@v1
+        uses: SiemaApplications/vossloh-gh-actions/mcuboot/stm32h7-banks@twister-sign-binaries
         with:
           mcuboot-binfile: ${{ matrix.mcuboot }}
           board-name: ${{ steps.board-name.outputs.board }}

@@ -229,6 +229,6 @@ jobs:
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v1
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@twister-sign-binaries
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json
