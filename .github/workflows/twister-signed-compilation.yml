@@ -30,6 +30,11 @@ on:
         description: 'Key to use as fallback if signing-key is not available (action run from fork)'
         required: false
         type: string
+      app-version:
+        description: 'Semver for application being compiled, used to sign application'
+        required: false
+        type: string
+        default: ""
 
     secrets:
       signing-key:
@@ -170,6 +175,25 @@ jobs:
             ${{ steps.twister-args.outputs.outdir }} \
             ${{ steps.twister-args.outputs.testsuite_root }} \
             ${{ steps.twister-args.outputs.testargs }}
+
+      - name: Sign Application
+        if: inputs.app-version != ''
+        run: |
+          binaries=$(find ${{ inputs.twister-outdir }} -name "zephyr.bin"
+          for zephyr_bin in ${binaries}; do
+            board=$(echo -n ${zephyr_bin} | jq -r -R -s 'split("/") | .[-5]')
+            app=$(echo -n ${zephyr_bin} | jq -r -R -s 'split("/") | .[-4]')
+            build_dir=$(dirname $(dirname ${zephyr_bin}))
+            signed_prefix="${board}-${app}-${{inputs.app-version}}.signed"
+            west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
+              --shex ${build_dir}/zephyr/${signed_prefix}.hex \
+              --sbin ${build_dir}/zephyr/${signed_prefix}.bin \
+              -- --key ${{ inputs.key-file }} --pad --version ${{ inputs.app-version }}
+            west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
+              --shex ${build_dir}/zephyr/${signed_prefix}.confirmed.hex \
+              --sbin ${build_dir}/zephyr/${signed_prefix}.confirmed.bin \
+              -- --key ${{ inputs.key-file }} --pad --confirm --version ${{ inputs.app-version }}
+          done
 
       - name: Compute Job Outputs
         id: jobs-outputs
