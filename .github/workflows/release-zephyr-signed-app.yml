@@ -1,0 +1,96 @@
+name: Release Zephyr Signed App
+# This workflow should trigger on tag push, the tag must be formed like this:
+# <project>-<application>-v<major>.<minor>.<patch><release_suffix>
+# project, application are mandatory workflow inputs
+# major, minor, patch are numerical values
+# release suffix could be "-rc.1", "-alpha", ""
+
+on:
+  workflow_call:
+    inputs:
+      app-dir:
+        description: 'Base directory to search the tests'
+        required: false
+        type: string
+        default: "."
+      board-root-dir:
+        description: 'Path to custom boards directory passed to --board-root option'
+        required: false
+        type: string
+      key-file:
+        description: 'Path where content of secret signing key is stored'
+        required: true
+        type: string
+      twister-outdir:
+        description: 'Twister output directory'
+        required: false
+        type: string
+        default: "twister-out"
+      tests-names:
+        description: 'Space separated list of test case name to build'
+        required: false
+        default: ""
+        type: string
+      fallback-key-file:
+        description: 'Key to use as fallback if signing-key is not available (action run from fork)'
+        required: false
+        type: string
+      project:
+        description: 'Project name'
+        required: true
+        type: string
+      application:
+        description: 'Application Name of the project'
+        required: true
+        type: string
+
+    secrets:
+      signing-key:
+        description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
+        required: true
+
+jobs:
+  release_infos:
+    runs-on: ubuntu-latest
+    outputs:
+      semver: ${{ steps.release-infos.outputs.semver }}
+    env:
+      TAG_RE: '${{inputs.project}}-${{inputs.application}}-v([0-9]+)\.([0-9]+)\.([0-9]+)(.*)'
+      FALLBACK_TAG: "${{inputs.project}}-${{inputs.application}}-v0.0.0-dev"
+
+    steps:
+      - name: Github Context
+        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@twister-sign-binaries
+
+      - name: Release Infos
+        id: release-infos
+        run: |
+          if [ "${{ github.ref_type }}" == "tag" ]; then
+            TAG="${{github.ref_name}}"
+          else
+            TAG="${FALLBACK_TAG}"
+          fi
+          major=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\1/")
+          minor=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\2/")
+          patch=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\3/")
+          suffix=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\4/")
+          semver="${major}.${minor}.${patch}${suffix}"
+          echo "major=${major}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "minor=${minor}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "patch=${patch}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "suffix=${suffix}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "semver=${semver}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+
+  app_compilation:
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@twister-sign-binaries
+    needs: release_infos
+    with:
+      app-dir: ${{ inputs.app-dir }}
+      board-root-dir: ${{ inputs.board-root-dir }}
+      key-file: ${{ inputs.key-file }}
+      twister-outdir: ${{ inputs.twister-outdir }}
+      tests-names: ${{ inputs.tests-names }}
+      fallback-key-file: ${{ inputs.fallback-key-file }}
+      app-version: ${{ needs.release_infos.outputs.semver }}
+    secrets:
+      signing-key: ${{ secrets.signing-key }}
