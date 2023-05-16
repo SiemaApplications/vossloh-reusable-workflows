@@ -95,7 +95,7 @@ jobs:
         id: board-name
         run: |
           board="$(echo ${{ matrix.mcuboot }} | cut -d '/' -f 2)"
-          echo "board=${board}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "board=${board}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
       - name: MCUboot STM32 H7 banks
         id: mcuboot-stm32h7-banks
@@ -111,13 +111,13 @@ jobs:
           elf="${bin%%.bin}.elf"
           elf_target="${board}_mcuboot.elf"
           cp ${elf} ${elf_target}
-          echo "mcuboot_elf=${elf_target}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "mcuboot_elf=${elf_target}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
       - name: Artifact name
         id: artifact-name
         run: |
           artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_INFIX}${{ inputs.artifact-suffix }}
-          echo "artifact_name=${artifact_name}" |tee $GITHUB_OUTPUT
+          echo "artifact_name=${artifact_name}" |tee -a $GITHUB_OUTPUT
 
       # It is not yet possible to get each output of matrix jobs
       # https://github.com/actions/runner/pull/2477

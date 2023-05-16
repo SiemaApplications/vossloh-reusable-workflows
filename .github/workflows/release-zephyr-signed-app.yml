@@ -75,11 +75,11 @@ jobs:
           patch=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\3/")
           suffix=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\4/")
           semver="${major}.${minor}.${patch}${suffix}"
-          echo "major=${major}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
-          echo "minor=${minor}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
-          echo "patch=${patch}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
-          echo "suffix=${suffix}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
-          echo "semver=${semver}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          echo "major=${major}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+          echo "minor=${minor}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+          echo "patch=${patch}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+          echo "suffix=${suffix}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+          echo "semver=${semver}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
   app_compilation:
     uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@twister-sign-binaries
