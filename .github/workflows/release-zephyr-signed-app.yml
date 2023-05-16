@@ -82,7 +82,7 @@ jobs:
           minor=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\2/")
           patch=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\3/")
           suffix=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\4/")
-          semver="${major}.${minor}.${patch}${suffix}"
+          semver="${major}.${minor}.${patch}"
           echo "major=${major}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "minor=${minor}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "patch=${patch}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
