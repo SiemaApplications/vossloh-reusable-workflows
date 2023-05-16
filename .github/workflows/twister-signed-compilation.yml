@@ -80,8 +80,8 @@ jobs:
           repo_name=$(echo ${{ github.repository }} | cut -d '/' -f 2)
           echo "Repository: ${{ github.repository }}"
           echo "Repository Name: ${repo_name}"
-          echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
-          echo "manifest=${repo_name}/west.yml" >> $GITHUB_OUTPUT
+          echo "repo_name=${repo_name}" | tee -a $GITHUB_OUTPUT
+          echo "manifest=${repo_name}/west.yml" |tee -a $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -157,12 +157,12 @@ jobs:
         id: twister-args
         run: |
           if [ -n "${{ inputs.board-root-dir }}" ]; then
-            echo "board_root=--board-root ${{ inputs.board-root-dir }}" >> $GITHUB_OUTPUT
+            echo "board_root=--board-root ${{ inputs.board-root-dir }}" | tee -a $GITHUB_ENV
           else
-            echo "board_root=" >> $GITHUB_OUTPUT
+            echo "board_root=" | tee -a $GITHUB_ENV
           fi
-          echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" >> $GITHUB_OUTPUT
-          echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
+          echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" | tee -a $GITHUB_ENV
+          echo "outdir=--outdir ${{ inputs.twister-outdir }}" | tee -a $GITHUB_ENV
           testargs=""
           if [ -n "${{ inputs.tests-names }}" ]; then
             for t in ${{ inputs.tests-names }}; do
@@ -176,16 +176,16 @@ jobs:
             done
           fi
           echo "platformargs=${platformargs}" | tee -a $GITHUB_ENV
-          echo "testargs=${testargs}" >> $GITHUB_OUTPUT
-          echo "testargs: ${testargs}"
+          echo "testargs=${testargs}" | tee -a $GITHUB_ENV
 
       - name: Twister Run
         run: |
-          ./zephyr/scripts/twister ${{ steps.twister-args.outputs.board_root }} \
+          ./zephyr/scripts/twister ${board_root} \
             --integration \
-            ${{ steps.twister-args.outputs.outdir }} \
-            ${{ steps.twister-args.outputs.testsuite_root }} \
-            ${{ steps.twister-args.outputs.testargs }}
+            ${outdir} \
+            ${testsuite_root} \
+            ${testargs} \
+            ${platformargs}
 
       - name: Sign Application
         if: inputs.app-version != ''
