@@ -200,11 +200,18 @@ jobs:
       - name: Sign Application
         if: inputs.app-version != ''
         run: |
-          binaries=$(find ${{ inputs.twister-outdir }} -name "zephyr.bin")
-          for zephyr_bin in ${binaries}; do
-            board=$(echo -n ${zephyr_bin} | jq -r -R -s 'split("/") | .[-5]')
-            app=$(echo -n ${zephyr_bin} | jq -r -R -s 'split("/") | .[-4]')
-            build_dir=$(dirname $(dirname ${zephyr_bin}))
+          echo "## Sign Applications" | tee -a ${GITHUB_STEP_SUMMARY}
+          echo "Version: ${{inputs.app-version}}" | tee -a ${GITHUB_STEP_SUMMARY}
+          twister_json="${{inputs.twister-outdir}}/twister.json"
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            echo "${build_dir} : ${board} - ${app}"
+            ls ${build_dir}
+            ls ${build_dir}/zephyr
+
             signed_prefix="${board}-${app}-${{inputs.app-version}}.signed"
             west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
               --shex ${build_dir}/zephyr/${signed_prefix}.hex \
@@ -243,6 +250,7 @@ jobs:
           retention-days: 1
           name: ${{ steps.jobs-outputs.outputs.binaries }}
           path: |
+            ${{ inputs.twister-outdir }}/twister.json
             ${{ inputs.twister-outdir }}/**/*.bin
             ${{ inputs.twister-outdir }}/**/*.elf
             ${{ inputs.twister-outdir }}/**/*.hex
