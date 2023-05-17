@@ -208,10 +208,7 @@ jobs:
             build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
             board=$(echo ${b} | base64 --decode | jq -r '.board')
             app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
-            echo "${build_dir} : ${board} - ${app}"
-            ls ${build_dir}
-            ls ${build_dir}/zephyr
-
+            echo "- ${build_dir} : ${board} - ${app}" | tee -a ${GITHUB_STEP_SUMMARY}
             signed_prefix="${board}-${app}-${{inputs.app-version}}.signed"
             west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
               --shex ${build_dir}/zephyr/${signed_prefix}.hex \
@@ -221,6 +218,20 @@ jobs:
               --shex ${build_dir}/zephyr/${signed_prefix}.confirmed.hex \
               --sbin ${build_dir}/zephyr/${signed_prefix}.confirmed.bin \
               -- --key ${{ inputs.key-file }} --pad --confirm --version ${{ inputs.app-version }}
+          done
+
+      - name: Rename Unsigned Binary
+        run: |
+          twister_json="${{inputs.twister-outdir}}/twister.json"
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            renamed_prefix="${board}-${app}-${{inputs.app-version}}"
+            cp ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
+            cp ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
+            cp ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
           done
 
       - name: Compute Job Outputs

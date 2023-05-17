@@ -62,6 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       semver: ${{ steps.release-infos.outputs.semver }}
+      release_name: ${{ steps.release-infos.outputs.release_name }}
     env:
       TAG_RE: '${{inputs.project}}-${{inputs.application}}-v([0-9]+)\.([0-9]+)\.([0-9]+)(.*)'
       FALLBACK_TAG: "${{inputs.project}}-${{inputs.application}}-v0.0.0-dev"
@@ -83,11 +84,14 @@ jobs:
           patch=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\3/")
           suffix=$(echo "${TAG}" | sed -E "s/${TAG_RE}/\4/")
           semver="${major}.${minor}.${patch}"
+          release_name="${{inputs.project}} ${{inputs.application}} ${major}.${minor}.${patch}${suffix}"
           echo "major=${major}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "minor=${minor}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "patch=${patch}"   | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "suffix=${suffix}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
           echo "semver=${semver}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+          echo "release_name=${release_name}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
+
 
   app_compilation:
     uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@twister-sign-binaries
@@ -104,3 +108,57 @@ jobs:
       integration: ${{ inputs.integration }}
     secrets:
       signing-key: ${{ secrets.signing-key }}
+
+  release:
+    runs-on: ubuntu-latest
+    env:
+      ASSETS_PATH: release_assets
+      RELEASE_BODY: body.md
+    needs:
+      - app_compilation
+      - release_infos
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        id: download
+        with:
+          name: ${{needs.app_compilation.outputs.binaries}}
+          path: ${{needs.app_compilation.outputs.binaries}}
+
+      - name: Release Body Intro
+        run: |
+          echo 'Release `${{inputs.application}}` application' | tee -a ${RELEASE_BODY}
+          echo 'Applications signed for mcuboot with version: `${{needs.release_infos.outputs.semver}}`' | tee -a ${RELEASE_BODY}
+          echo '' >> ${RELEASE_BODY}
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p ${ASSETS_PATH}
+          twister_json="${{needs.app_compilation.outputs.binaries}}/twister.json"
+          find ${{needs.app_compilation.outputs.binaries}}
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="${{needs.app_compilation.outputs.binaries}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            binary_prefix="${board}-${app}-${{needs.release_infos.outputs.semver}}"
+            echo "Config ${app} for board ${board}" | tee -a ${GITHUB_STEP_SUMMARY} | tee -a ${RELEASE_BODY}
+            files_ext=".bin .hex .signed.bin .signed.hex .signed.confirmed.bin .signed.confirmed.hex"
+            for ext in ${files_ext}; do
+              fw_name="${binary_prefix}${ext}"
+              echo "Fetch ${fw_name} from ${build_dir}"
+              if [ -f "${ASSETS_PATH}/${fw_name}" ]; then
+                echo "::error file=${fw_name}::Asset already exists"
+                exit 1
+              fi
+              cp ${build_dir}/zephyr/${binary_prefix}${ext} ${ASSETS_PATH}/
+            done
+          done
+
+      - name: Create Release
+        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0 (17/05/2023)
+        with:
+          artifacts: ${{env.ASSETS_PATH}}/*
+          tag: ${{github.ref_name}}
+          name: ${{needs.release_infos.outputs.release_name}}
+          bodyFile: ${{env.RELEASE_BODY}}
