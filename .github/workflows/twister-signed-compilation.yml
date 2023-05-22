@@ -208,6 +208,12 @@ jobs:
             build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
             board=$(echo ${b} | base64 --decode | jq -r '.board')
             app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            dot_config="${build_dir}/zephyr/.config"
+            use_mcuboot=$(cat ${dot_config} | grep -c "CONFIG_BOOTLOADER_MCUBOOT=y" || true)
+            if [ ${use_mcuboot} -eq 0 ]; then
+              echo "- ${build_dir} : ${board} - ${app} - No MCUboot support skip signing." | tee -a ${GITHUB_STEP_SUMMARY}
+              continue
+            fi
             echo "- ${build_dir} : ${board} - ${app}" | tee -a ${GITHUB_STEP_SUMMARY}
             signed_prefix="${board}-${app}-${{inputs.app-version}}.signed"
             west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
