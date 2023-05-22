@@ -141,9 +141,16 @@ jobs:
             build_dir="${{needs.app_compilation.outputs.binaries}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
             board=$(echo ${b} | base64 --decode | jq -r '.board')
             app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
-            binary_prefix="${board}-${app}-${{needs.release_infos.outputs.semver}}"
+            dot_config="${build_dir}/zephyr/.config"
+            use_mcuboot=$(cat ${dot_config} | grep -c "CONFIG_BOOTLOADER_MCUBOOT=y" || true)
+            if [ ${use_mcuboot} -eq 1 ]; then
+              binary_prefix="${board}-${app}-${{needs.release_infos.outputs.semver}}"
+              files_ext=".elf .bin .hex .signed.bin .signed.hex .signed.confirmed.bin .signed.confirmed.hex"
+            else
+              binary_prefix="${board}-${app}"
+              files_ext=".elf .bin .hex"
+            fi
             echo "Config ${app} for board ${board}" | tee -a ${GITHUB_STEP_SUMMARY} | tee -a ${RELEASE_BODY}
-            files_ext=".bin .hex .signed.bin .signed.hex .signed.confirmed.bin .signed.confirmed.hex"
             for ext in ${files_ext}; do
               fw_name="${binary_prefix}${ext}"
               echo "Fetch ${fw_name} from ${build_dir}"

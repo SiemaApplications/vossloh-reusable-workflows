@@ -236,10 +236,16 @@ jobs:
             build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
             board=$(echo ${b} | base64 --decode | jq -r '.board')
             app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
-            renamed_prefix="${board}-${app}-${{inputs.app-version}}"
-            cp ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
-            cp ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
-            cp ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
+            dot_config="${build_dir}/zephyr/.config"
+            use_mcuboot=$(cat ${dot_config} | grep -c "CONFIG_BOOTLOADER_MCUBOOT=y" || true)
+            if [ ${use_mcuboot} -eq 1 ]; then
+              renamed_prefix="${board}-${app}-${{inputs.app-version}}"
+            else
+              renamed_prefix="${board}-${app}"
+            fi
+            mv ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
+            mv ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
+            mv ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
           done
 
       - name: Compute Job Outputs
@@ -273,6 +279,7 @@ jobs:
             ${{ inputs.twister-outdir }}/**/*.bin
             ${{ inputs.twister-outdir }}/**/*.elf
             ${{ inputs.twister-outdir }}/**/*.hex
+            ${{ inputs.twister-outdir }}/**/.config
             !${{ inputs.twister-outdir }}/**/zephyr_pre*.elf
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
