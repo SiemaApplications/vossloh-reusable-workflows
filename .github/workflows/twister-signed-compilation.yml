@@ -3,6 +3,11 @@ name: Twister Compilation
 on:
   workflow_call:
     inputs:
+      manifest:
+        description: 'Path to west manifest file'
+        required: false
+        type: string
+        default: 'west.yml'
       app-dir:
         description: 'Base directory to search the tests'
         required: false
@@ -86,7 +91,7 @@ jobs:
           echo "Repository: ${{ github.repository }}"
           echo "Repository Name: ${repo_name}"
           echo "repo_name=${repo_name}" | tee -a $GITHUB_OUTPUT
-          echo "manifest=${repo_name}/west.yml" |tee -a $GITHUB_OUTPUT
+          echo "manifest=${repo_name}/${{inputs.manifest}}" |tee -a $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -112,7 +117,7 @@ jobs:
 
       - name: West Init
         run: |
-          west init -l ${{ steps.repo-info.outputs.repo_name }}
+          west init -l ${{ steps.repo-info.outputs.repo_name }} --manifest-file ${{inputs.manifest}}
 
       - name: West Update
         if: steps.cache.outputs.cache-hit != 'true'
@@ -156,7 +161,7 @@ jobs:
         env:
           TESTS_NAMES: ${{inputs.tests-names}}
         run: |
-          if [ "${{ inputs.integration }}" == "true" ]; then
+          if [ "${{ inputs.integration }}" = "true" ]; then
             echo "integration=--integration" | tee -a $GITHUB_ENV
           else
             echo "integration=" | tee -a $GITHUB_ENV
