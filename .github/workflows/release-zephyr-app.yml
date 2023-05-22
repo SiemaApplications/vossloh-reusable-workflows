@@ -1,4 +1,4 @@
-name: Release Zephyr Signed App
+name: Release Zephyr App
 # This workflow should trigger on tag push, the tag must be formed like this:
 # <project>-<application>-v<major>.<minor>.<patch><release_suffix>
 # project, application are mandatory workflow inputs
@@ -23,7 +23,7 @@ on:
         type: string
       key-file:
         description: 'Path where content of secret signing key is stored'
-        required: true
+        required: false
         type: string
       twister-outdir:
         description: 'Twister output directory'
@@ -55,7 +55,7 @@ on:
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
-        required: true
+        required: false
 
 jobs:
   release_infos:

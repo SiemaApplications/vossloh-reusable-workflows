@@ -1,4 +1,4 @@
-name: Twister Signed Compilation
+name: Twister Compilation
 
 on:
   workflow_call:
@@ -18,7 +18,7 @@ on:
         type: string
       key-file:
         description: 'Path where content of secret signing key is stored'
-        required: true
+        required: false
         type: string
       twister-outdir:
         description: 'Twister output directory'
@@ -48,7 +48,7 @@ on:
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
-        required: true
+        required: false
 
     outputs:
       binaries:
@@ -121,6 +121,7 @@ jobs:
 
       # Avoid leaking the private key on the command line
       - name: Get Signing Key
+        if: ${{ inputs.key-file != '' }}
         shell: python
         env:
           MCUBOOT_KEY: ${{ secrets.signing-key }}
@@ -132,31 +133,23 @@ jobs:
           with open(key_file, 'w', encoding='utf-8') as outfile:
               outfile.write("%s" % (key))
 
-      - name: hash key
+      - name: Signing Key Fallback
         id: signing-key-info
+        if: ${{ inputs.key-file != '' }}
         run: |
           ls -l ${{ inputs.key-file }}
           echo "md5 of ${{ inputs.key-file }}"
           md5sum ${{ inputs.key-file }}
           keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
-          echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
-
-      - name: Signing Key Fallback
-        if: ${{ steps.signing-key-info.outputs.keyfile_sz == 0 }}
-        run: |
-          if [ -n "${{ inputs.fallback-key-file }}" ]; then
-            ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
-            echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
-          else
-            echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
-            exit 1
+          if [ ${keyfile_sz} -eq 0 ]; then
+            if [ -n "${{ inputs.fallback-key-file }}" ]; then
+              ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
+              echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
+            else
+              echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
+              exit 1
+            fi
           fi
-
-      - name: debug
-        run: |
-          pwd
-          echo "$ ls -l ${{ inputs.key-file }}"
-          ls -l ${{ inputs.key-file }}
 
       - name: Twister args
         id: twister-args
