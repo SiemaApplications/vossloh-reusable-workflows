@@ -56,7 +56,7 @@ on:
         value: ${{ jobs.compile.outputs.binaries }}
 
       binary-list:
-        description: 'Json list of binary files produced by this job.'
+        description: 'Json list of binary files (unsigned) produced by this job.'
         value: ${{ jobs.compile.outputs.binary-list }}
 
       logs:
@@ -236,13 +236,7 @@ jobs:
             build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
             board=$(echo ${b} | base64 --decode | jq -r '.board')
             app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
-            dot_config="${build_dir}/zephyr/.config"
-            use_mcuboot=$(cat ${dot_config} | grep -c "CONFIG_BOOTLOADER_MCUBOOT=y" || true)
-            if [ ${use_mcuboot} -eq 1 ]; then
-              renamed_prefix="${board}-${app}-${{inputs.app-version}}"
-            else
-              renamed_prefix="${board}-${app}"
-            fi
+            renamed_prefix="${board}-${app}"
             mv ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
             mv ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
             mv ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
@@ -254,7 +248,16 @@ jobs:
           cd ${{ inputs.twister-outdir }}
           binaries="${{ inputs.twister-outdir }}-binaries"
           logs="${{ inputs.twister-outdir }}-build-logs"
-          binary_list="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          binary_list='[]'
+          builds="$(cat twister.json | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            binary_prefix="${board}-${app}"
+            binary_file="${build_dir}/zephyr/${binary_prefix}.bin"
+            binary_list=$(echo "${binary_list}" | jq --compact-output --monochrome-output --raw-output " . += [\"${binary_file}\"]")
+          done
           echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
           echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
           echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
