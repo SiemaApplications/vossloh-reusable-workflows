@@ -1,0 +1,38 @@
+name: Test Zephyr Reusable Workflows
+
+on:
+  push:
+    branches:
+      - '**'
+    tags-ignore:
+      - '**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  signed_app:
+    name: Zephyr Signed Application Compilation
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v2
+    with:
+      manifest: tests/zephyr/west.yml
+      app-dir: zephyr/samples/subsys/usb/dfu/
+      key-file: key.pem
+      twister-outdir: twister-signed_app
+      tests-names: samples/subsys/usb/dfu/sample.usb.dfu
+      boards: nucleo_h743zi
+      integration: false
+    secrets:
+      signing-key: ${{ secrets.MCUBOOT_SANDBOX_KEY }}
+
+  unsigned_app:
+    name: Zephyr Application Compilation
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v2
+    with:
+      manifest: tests/zephyr/west.yml
+      app-dir: zephyr/samples
+      twister-outdir: twister-app
+      tests-names: samples/hello_world/sample.basic.helloworld
+      boards: nucleo_h743zi
+      integration: false

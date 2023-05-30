@@ -1,0 +1,46 @@
+manifest:
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+    - name: siema-applications
+      url-base: https://github.com/SiemaApplications
+  defaults:
+    remote: siema-applications
+  projects:
+    - name: zephyr
+      revision: edbdca85a1d6722faca18122127ff7fca17ecd66
+      import:
+        name-blocklist:
+          - canopennode
+          - chre
+          - ci-tools
+          - hal_altera
+          - hal_atmel
+          - hal_espressif
+          - hal_gigadevice
+          - hal_infineon
+          - hal_microchip
+          - hal_nordic
+          - hal_nuvoton
+          - hal_nxp
+          - hal_openisa
+          - hal_quicklogic
+          - hal_rpi_pico
+          - hal_silabs
+          - hal_telink
+          - hal_ti
+          - hal_xtensa
+          - liblc3codec
+          - lvgl
+          - lz4
+          - nrf_hw_models
+          - segger
+          - sof
+          - tflite-micro
+          - TraceRecorderSource
+    - name: mcuboot
+      revision: 92ddd724865e125f8a8acf57c2acfb17aa8df479
+      path: bootloader/mcuboot
+
+  self:
+    path: sandbox

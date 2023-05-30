@@ -1,8 +1,13 @@
-name: Twister Signed Compilation
+name: Twister Compilation
 
 on:
   workflow_call:
     inputs:
+      manifest:
+        description: 'Path to west manifest file'
+        required: false
+        type: string
+        default: 'west.yml'
       app-dir:
         description: 'Base directory to search the tests'
         required: false
@@ -12,9 +17,13 @@ on:
         description: 'Path to custom boards directory passed to --board-root option'
         required: false
         type: string
+      boards:
+        description: 'Space separated list of boards to build for'
+        required: false
+        type: string
       key-file:
         description: 'Path where content of secret signing key is stored'
-        required: true
+        required: false
         type: string
       twister-outdir:
         description: 'Twister output directory'
@@ -30,11 +39,21 @@ on:
         description: 'Key to use as fallback if signing-key is not available (action run from fork)'
         required: false
         type: string
+      app-version:
+        description: 'Semver for application being compiled, used to sign application'
+        required: false
+        type: string
+        default: ""
+      integration:
+        description: 'Runs twister with --integration flag'
+        type: boolean
+        default: true
+
 
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
-        required: true
+        required: false
 
     outputs:
       binaries:
@@ -42,7 +61,7 @@ on:
         value: ${{ jobs.compile.outputs.binaries }}
 
       binary-list:
-        description: 'Json list of binary files produced by this job.'
+        description: 'Json list of binary files (unsigned) produced by this job.'
         value: ${{ jobs.compile.outputs.binary-list }}
 
       logs:
@@ -71,8 +90,8 @@ jobs:
           repo_name=$(echo ${{ github.repository }} | cut -d '/' -f 2)
           echo "Repository: ${{ github.repository }}"
           echo "Repository Name: ${repo_name}"
-          echo "repo_name=${repo_name}" >> $GITHUB_OUTPUT
-          echo "manifest=${repo_name}/west.yml" >> $GITHUB_OUTPUT
+          echo "repo_name=${repo_name}" | tee -a $GITHUB_OUTPUT
+          echo "manifest=${repo_name}/${{inputs.manifest}}" |tee -a $GITHUB_OUTPUT
 
       - name: Checkout
         uses: actions/checkout@v3
@@ -98,7 +117,7 @@ jobs:
 
       - name: West Init
         run: |
-          west init -l ${{ steps.repo-info.outputs.repo_name }}
+          west init -l ${{ steps.repo-info.outputs.repo_name }} --manifest-file ${{inputs.manifest}}
 
       - name: West Update
         if: steps.cache.outputs.cache-hit != 'true'
@@ -107,6 +126,7 @@ jobs:
 
       # Avoid leaking the private key on the command line
       - name: Get Signing Key
+        if: ${{ inputs.key-file != '' }}
         shell: python
         env:
           MCUBOOT_KEY: ${{ secrets.signing-key }}
@@ -118,58 +138,107 @@ jobs:
           with open(key_file, 'w', encoding='utf-8') as outfile:
               outfile.write("%s" % (key))
 
-      - name: hash key
+      - name: Signing Key Fallback
         id: signing-key-info
+        if: ${{ inputs.key-file != '' }}
         run: |
           ls -l ${{ inputs.key-file }}
           echo "md5 of ${{ inputs.key-file }}"
           md5sum ${{ inputs.key-file }}
           keyfile_sz=$(ls -l ${{ inputs.key-file }} | awk '{print $5}')
-          echo "keyfile_sz=${keyfile_sz}" >> $GITHUB_OUTPUT
-
-      - name: Signing Key Fallback
-        if: ${{ steps.signing-key-info.outputs.keyfile_sz == 0 }}
-        run: |
-          if [ -n "${{ inputs.fallback-key-file }}" ]; then
-            ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
-            echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
-          else
-            echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
-            exit 1
+          if [ ${keyfile_sz} -eq 0 ]; then
+            if [ -n "${{ inputs.fallback-key-file }}" ]; then
+              ln -fs $(realpath "${{ inputs.fallback-key-file }}") ${{ inputs.key-file }}
+              echo "::notice file=${{ inputs.fallback-key-file }}::Use signing key fallback"
+            else
+              echo "::warning file=${{ inputs.key-file }}::No signing key fallback"
+              exit 1
+            fi
           fi
-
-      - name: debug
-        run: |
-          pwd
-          echo "$ ls -l ${{ inputs.key-file }}"
-          ls -l ${{ inputs.key-file }}
 
       - name: Twister args
         id: twister-args
+        env:
+          TESTS_NAMES: ${{inputs.tests-names}}
         run: |
-          if [ -n "${{ inputs.board-root-dir }}" ]; then
-            echo "board_root=--board-root ${{ inputs.board-root-dir }}" >> $GITHUB_OUTPUT
+          if [ "${{ inputs.integration }}" = "true" ]; then
+            echo "integration=--integration" | tee -a $GITHUB_ENV
           else
-            echo "board_root=" >> $GITHUB_OUTPUT
+            echo "integration=" | tee -a $GITHUB_ENV
           fi
-          echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" >> $GITHUB_OUTPUT
-          echo "outdir=--outdir ${{ inputs.twister-outdir }}" >> $GITHUB_OUTPUT
+          if [ -n "${{ inputs.board-root-dir }}" ]; then
+            echo "board_root=--board-root ${{ inputs.board-root-dir }}" | tee -a $GITHUB_ENV
+          else
+            echo "board_root=" | tee -a $GITHUB_ENV
+          fi
+          echo "testsuite_root=--testsuite-root ${{ inputs.app-dir }}" | tee -a $GITHUB_ENV
+          echo "outdir=--outdir ${{ inputs.twister-outdir }}" | tee -a $GITHUB_ENV
           testargs=""
-          if [ -n "${{ inputs.tests-names }}" ]; then
-            for t in ${{ inputs.tests-names }}; do
+          if [ -n "${TESTS_NAMES}" ]; then
+            for t in ${TESTS_NAMES}; do
               testargs="${testargs} --test ${t}"
             done
           fi
-          echo "testargs=${testargs}" >> $GITHUB_OUTPUT
-          echo "testargs: ${testargs}"
+          platformargs=""
+          if [ -n "${{inputs.boards}}" ]; then
+            for b in ${{inputs.boards}}; do
+              platformargs="${platformargs} --platform ${b}"
+            done
+          fi
+          echo "platformargs=${platformargs}" | tee -a $GITHUB_ENV
+          echo "testargs=${testargs}" | tee -a $GITHUB_ENV
 
       - name: Twister Run
         run: |
-          ./zephyr/scripts/twister ${{ steps.twister-args.outputs.board_root }} \
-            --integration \
-            ${{ steps.twister-args.outputs.outdir }} \
-            ${{ steps.twister-args.outputs.testsuite_root }} \
-            ${{ steps.twister-args.outputs.testargs }}
+          ./zephyr/scripts/twister ${board_root} \
+            ${integration} \
+            ${outdir} \
+            ${testsuite_root} \
+            ${testargs} \
+            ${platformargs}
+
+      - name: Sign Application
+        if: inputs.app-version != ''
+        run: |
+          echo "## Sign Applications" | tee -a ${GITHUB_STEP_SUMMARY}
+          echo "Version: ${{inputs.app-version}}" | tee -a ${GITHUB_STEP_SUMMARY}
+          twister_json="${{inputs.twister-outdir}}/twister.json"
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            dot_config="${build_dir}/zephyr/.config"
+            use_mcuboot=$(cat ${dot_config} | grep -c "CONFIG_BOOTLOADER_MCUBOOT=y" || true)
+            if [ ${use_mcuboot} -eq 0 ]; then
+              echo "- ${build_dir} : ${board} - ${app} - No MCUboot support skip signing." | tee -a ${GITHUB_STEP_SUMMARY}
+              continue
+            fi
+            echo "- ${build_dir} : ${board} - ${app}" | tee -a ${GITHUB_STEP_SUMMARY}
+            signed_prefix="${board}-${app}-${{inputs.app-version}}.signed"
+            west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
+              --shex ${build_dir}/zephyr/${signed_prefix}.hex \
+              --sbin ${build_dir}/zephyr/${signed_prefix}.bin \
+              -- --key ${{ inputs.key-file }} --pad --version ${{ inputs.app-version }}
+            west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
+              --shex ${build_dir}/zephyr/${signed_prefix}.confirmed.hex \
+              --sbin ${build_dir}/zephyr/${signed_prefix}.confirmed.bin \
+              -- --key ${{ inputs.key-file }} --pad --confirm --version ${{ inputs.app-version }}
+          done
+
+      - name: Rename Unsigned Binary
+        run: |
+          twister_json="${{inputs.twister-outdir}}/twister.json"
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="${{inputs.twister-outdir}}/$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            renamed_prefix="${board}-${app}"
+            mv ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
+            mv ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
+            mv ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
+          done
 
       - name: Compute Job Outputs
         id: jobs-outputs
@@ -177,7 +246,16 @@ jobs:
           cd ${{ inputs.twister-outdir }}
           binaries="${{ inputs.twister-outdir }}-binaries"
           logs="${{ inputs.twister-outdir }}-build-logs"
-          binary_list="$(find . -name 'zephyr.bin' | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          binary_list='[]'
+          builds="$(cat twister.json | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          for b in ${builds}; do
+            build_dir="$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board=$(echo ${b} | base64 --decode | jq -r '.board')
+            app=$(basename $(echo ${b} | base64 --decode | jq -r '.name'))
+            binary_prefix="${board}-${app}"
+            binary_file="${build_dir}/zephyr/${binary_prefix}.bin"
+            binary_list=$(echo "${binary_list}" | jq --compact-output --monochrome-output --raw-output " . += [\"${binary_file}\"]")
+          done
           echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
           echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
           echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
@@ -198,13 +276,15 @@ jobs:
           retention-days: 1
           name: ${{ steps.jobs-outputs.outputs.binaries }}
           path: |
+            ${{ inputs.twister-outdir }}/twister.json
             ${{ inputs.twister-outdir }}/**/*.bin
             ${{ inputs.twister-outdir }}/**/*.elf
             ${{ inputs.twister-outdir }}/**/*.hex
+            ${{ inputs.twister-outdir }}/**/.config
             !${{ inputs.twister-outdir }}/**/zephyr_pre*.elf
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v1
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v2
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json

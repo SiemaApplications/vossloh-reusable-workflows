@@ -38,7 +38,7 @@ on:
     outputs:
       mcuboot-progfiles:
         description: 'Artifact name containing mcuboot programming files for each bank.'
-        value: ${{ jobs.sreccat.outputs.artifacts-names }}
+        value: ${{ jobs.sreccat.outputs.artifact-name }}
 
       binaries:
         description: 'Artifact name containing binaires, retrieved from compilation job.'
@@ -51,7 +51,7 @@ on:
 
 jobs:
   mcuboot_compil:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v1
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v2
     with:
       app-dir: bootloader/mcuboot/boot/zephyr/
       board-root-dir: ${{ inputs.board-root-dir }}
@@ -67,13 +67,10 @@ jobs:
     name: MCUboot files for stm32h7 banks
     needs:
       - mcuboot_compil
-    strategy:
-      matrix:
-        mcuboot: ${{ fromJson(needs.mcuboot_compil.outputs.binary-list) }}
     env:
       ARTIFACT_INFIX: '-mcuboot-progfiles'
     outputs:
-      artifacts-names: ${{ steps.matrix-artifacts-names.outputs.artifacts }}
+      artifact-name: ${{ steps.artifact-name.outputs.artifact_name }}
 
     steps:
       - name: install srec_cat
@@ -88,52 +85,34 @@ jobs:
       - name: 'Show artifacts'
         run: |
           find .
-          echo "---------"
-          echo "This job process ${{ matrix.mcuboot }}"
 
-      - name: Get Board Name
-        id: board-name
+      - name: Store MCUboot in Second Bank
         run: |
-          board="$(echo ${{ matrix.mcuboot }} | cut -d '/' -f 2)"
-          echo "board=${board}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
-
-      - name: MCUboot STM32 H7 banks
-        id: mcuboot-stm32h7-banks
-        uses: SiemaApplications/vossloh-gh-actions/mcuboot/stm32h7-banks@v1
-        with:
-          mcuboot-binfile: ${{ matrix.mcuboot }}
-          board-name: ${{ steps.board-name.outputs.board }}
-
-      - name: Rename Elf
-        id: rename-elf
-        run: |
-          bin=${{ matrix.mcuboot }}
-          elf="${bin%%.bin}.elf"
-          elf_target="${board}_mcuboot.elf"
-          cp ${elf} ${elf_target}
-          echo "mcuboot_elf=${elf_target}" | tee $GITHUB_ENV | tee $GITHUB_OUTPUT
+          twister_json="twister.json"
+          builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
+          echo "## Store MCUboot in Second Bank" | tee -a ${GITHUB_STEP_SUMMARY}
+          for b in ${builds}; do
+            build_dir="$(echo ${b} | base64 --decode | jq -r '.build_dir')"
+            board="$(echo ${b} | base64 --decode | jq -r '.board')"
+            app="$(basename $(echo ${b} | base64 --decode | jq -r '.name'))"
+            fw_prefix="${board}-${app}"
+            binary="${build_dir}/zephyr/${fw_prefix}.bin"
+            hex_file_2banks="${build_dir}/zephyr/${fw_prefix}_2banks.hex"
+            echo "- ${board} - ${app}" | tee -a ${GITHUB_STEP_SUMMARY}
+            srec_cat ${binary} -binary -offset 0x08000000 ${binary} -binary -offset 0x08100000 -Output ${hex_file_2banks} -Intel
+          done
 
       - name: Artifact name
         id: artifact-name
         run: |
-          artifact_name=${{ steps.board-name.outputs.board }}${ARTIFACT_INFIX}${{ inputs.artifact-suffix }}
-          echo "artifact_name=${artifact_name}" |tee $GITHUB_OUTPUT
+          artifact_name="stm32h7${ARTIFACT_INFIX}${{inputs.artifact-suffix}}"
+          echo "artifact_name=${artifact_name}" | tee -a $GITHUB_OUTPUT
 
-      # It is not yet possible to get each output of matrix jobs
-      # https://github.com/actions/runner/pull/2477
-      # Although the PR is merged in, some server side dev is required and the team responsible for this have been fired
-      # https://github.com/actions/runner/pull/2477#issuecomment-1501003600
-      # This steps compute artifacts names across the job matrix.
-      - name: Artifacts Names across Matrix
-        id: matrix-artifacts-names
+      - name: Show Produced Artifacts
         run: |
-          artifacts=""
-          for binary in $(echo '${{ needs.mcuboot_compil.outputs.binary-list }}' | jq -r '.[]'); do
-            board="$(echo ${binary} | cut -d '/' -f 2)"
-            artifact_name="${board}${ARTIFACT_INFIX}${{ inputs.artifact-suffix }}"
-            artifacts="${artifacts} ${artifact_name}"
-          done
-          echo "artifacts=${artifacts}" | tee -a $GITHUB_OUTPUT
+          find . -name "*.hex"
+          find . -name "*.bin"
+          find . -name "*.elf"
 
       - name: Upload MCUboot Binaries
         uses: actions/upload-artifact@v3
@@ -142,7 +121,7 @@ jobs:
           retention-days: 1
           name: ${{ steps.artifact-name.outputs.artifact_name }}
           path: |
-            ${{ env.mcuboot_elf }}
-            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-banks-hexfile }}
-            ${{ steps.mcuboot-stm32h7-banks.outputs.mcuboot-binfile }}
-            ${{ steps.mcuboot-stm32h7-banks.outputs.md5sum-file }}
+            twister.json
+            **/*.bin
+            **/*.hex
+            **/*.elf
