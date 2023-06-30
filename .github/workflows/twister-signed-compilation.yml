@@ -75,7 +75,7 @@ jobs:
     outputs:
       binaries: ${{ steps.jobs-outputs.outputs.binaries }}
       binary-list: ${{ steps.jobs-outputs.outputs.binary_list }}
-      logs: ${{ steps.jobs-outputs.outputs.logs }}
+      logs: ${{ steps.logs-artifact-name.outputs.logs }}
 
     container:
       image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.4
@@ -155,6 +155,12 @@ jobs:
               exit 1
             fi
           fi
+
+      - name: Build Logs Artifact name
+        id: logs-artifact-name
+        run: |
+          logs="${{ inputs.twister-outdir }}-build-logs"
+          echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
 
       - name: Twister args
         id: twister-args
@@ -245,7 +251,6 @@ jobs:
         run: |
           cd ${{ inputs.twister-outdir }}
           binaries="${{ inputs.twister-outdir }}-binaries"
-          logs="${{ inputs.twister-outdir }}-build-logs"
           binary_list='[]'
           builds="$(cat twister.json | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
           for b in ${builds}; do
@@ -258,14 +263,13 @@ jobs:
           done
           echo "binaries=${binaries}" | tee -a $GITHUB_OUTPUT
           echo "binary_list=${binary_list}" | tee -a $GITHUB_OUTPUT
-          echo "logs=${logs}" | tee -a $GITHUB_OUTPUT
 
       - name: Upload Build Logs
         if: always()
         uses: actions/upload-artifact@v3
         with:
           retention-days: 7
-          name: ${{ steps.jobs-outputs.outputs.logs }}
+          name: ${{ steps.logs-artifact-name.outputs.logs }}
           path: |
             ${{ inputs.twister-outdir }}/**/build.log
 
