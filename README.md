@@ -39,8 +39,8 @@ Due to dependencies between reusable worklows and a composite action, pinning to
 While developping a new action, it is recommended to work from a branch and reference that branch, when the action is ready and merged to main, the tag can be moved (as long as compatibility is maintained):
 
 ```
-git tag -d v1
-git tag v1
+git tag -d v3
+git tag v3
 git push --tags --force
 ```
 
@@ -50,3 +50,10 @@ Install `pre-commit` to check the syntax of the actions and workflows files:
 pip install pre-commit
 pre-commit install
 ```
+
+## Updating actions versions
+`scripts/update_action_refs.sh` can help you set the version of for every workflow in a repository:
+```
+scripts/update_actions_refs.sh -s v3
+```
+Verify the changes afterward.
