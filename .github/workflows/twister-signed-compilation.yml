@@ -78,7 +78,7 @@ jobs:
       logs: ${{ steps.jobs-outputs.outputs.logs }}
 
     container:
-      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.3
+      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.4
       volumes:
         # When using a custom container, the path of the individuals composite action is not mounted into the target container and needs to be manually provided.
         # See https://github.com/orgs/community/discussions/53771
