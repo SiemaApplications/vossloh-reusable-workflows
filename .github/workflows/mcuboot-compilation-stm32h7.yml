@@ -51,7 +51,7 @@ on:
 
 jobs:
   mcuboot_compil:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v3
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v4
     with:
       app-dir: bootloader/mcuboot/boot/zephyr/
       board-root-dir: ${{ inputs.board-root-dir }}
