@@ -78,7 +78,7 @@ jobs:
       logs: ${{ steps.logs-artifact-name.outputs.logs }}
 
     container:
-      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.5
+      image: ghcr.io/siemaapplications/zephyr-arm-build:v0.0.6
       volumes:
         # When using a custom container, the path of the individuals composite action is not mounted into the target container and needs to be manually provided.
         # See https://github.com/orgs/community/discussions/53771
@@ -289,6 +289,6 @@ jobs:
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v4
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v5
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json

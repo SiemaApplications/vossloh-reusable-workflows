@@ -54,6 +54,6 @@ pre-commit install
 ## Updating actions versions
 `scripts/update_action_refs.sh` can help you set the version of for every workflow in a repository:
 ```
-scripts/update_actions_refs.sh -s v3
+scripts/update_action_refs.sh -s v3
 ```
 Verify the changes afterward.

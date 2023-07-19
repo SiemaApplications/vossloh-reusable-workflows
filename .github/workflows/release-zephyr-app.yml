@@ -69,7 +69,7 @@ jobs:
 
     steps:
       - name: Github Context
-        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@v4
+        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@v5
 
       - name: Release Infos
         id: release-infos
@@ -94,7 +94,7 @@ jobs:
 
 
   app_compilation:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v4
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v5
     needs: release_infos
     with:
       app-dir: ${{ inputs.app-dir }}
