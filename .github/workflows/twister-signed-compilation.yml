@@ -203,11 +203,37 @@ jobs:
             ${testargs} \
             ${platformargs}
 
+      - name: Split semver
+        id: split-semver
+        if: inputs.app-version != ''
+        shell: python
+        run: |
+          import re
+          import os
+          semver_re = r"^(?P<major>0|[1-9]\d*)\.(?P<minor>0|[1-9]\d*)\.(?P<patch>0|[1-9]\d*)(?:-(?P<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$"
+          version = "${{inputs.app-version}}"
+          match = re.search(semver_re, version)
+          assert match is not None, "Invalid semver %s" % version
+          assert match.group("buildmetadata").isdigit(), "Invalid buildnumber %s" % match.group("buildmetadata")
+          with open(os.environ.get('GITHUB_OUTPUT'), 'w', encoding='utf-8') as gh_out:
+            gh_out.write("major=%s\n" % match.group("major"))
+            gh_out.write("minor=%s\n" % match.group("minor"))
+            gh_out.write("patch=%s\n" % match.group("patch"))
+            gh_out.write("prerelease=%s\n" % match.group("prerelease"))
+            gh_out.write("buildmetadata=%s\n" % match.group("buildmetadata"))
+
       - name: Sign Application
         if: inputs.app-version != ''
         run: |
           echo "## Sign Applications" | tee -a ${GITHUB_STEP_SUMMARY}
           echo "Version: ${{inputs.app-version}}" | tee -a ${GITHUB_STEP_SUMMARY}
+          major="${{steps.split-semver.outputs.major}}"
+          minor="${{steps.split-semver.outputs.minor}}"
+          patch="${{steps.split-semver.outputs.patch}}"
+          prerelease="${{steps.split-semver.outputs.prerelease}}"
+          buildmetadata="${{steps.split-semver.outputs.buildmetadata}}"
+          sign_version="${major}.${minor}.${patch}+${buildmetadata}"
+          echo "Signed version: ${sign_version}"
           twister_json="${{inputs.twister-outdir}}/twister.json"
           builds="$(cat ${twister_json} | jq -r '.testsuites | .[] | select(.status == "passed") | select(length > 0) | {build_dir:(.platform + "/" + .name), board:.platform, name:.name} | @base64')"
           for b in ${builds}; do
@@ -225,11 +251,11 @@ jobs:
             west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
               --shex ${build_dir}/zephyr/${signed_prefix}.hex \
               --sbin ${build_dir}/zephyr/${signed_prefix}.bin \
-              -- --key ${{ inputs.key-file }} --pad --version ${{ inputs.app-version }}
+              -- --key ${{ inputs.key-file }} --pad --version ${sign_version}
             west sign -d ${build_dir} -t imgtool --tool-path ./bootloader/mcuboot/scripts/imgtool.py \
               --shex ${build_dir}/zephyr/${signed_prefix}.confirmed.hex \
               --sbin ${build_dir}/zephyr/${signed_prefix}.confirmed.bin \
-              -- --key ${{ inputs.key-file }} --pad --confirm --version ${{ inputs.app-version }}
+              -- --key ${{ inputs.key-file }} --pad --confirm --version ${sign_version}
           done
 
       - name: Rename Unsigned Binary
