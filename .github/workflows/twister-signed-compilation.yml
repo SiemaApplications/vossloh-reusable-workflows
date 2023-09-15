@@ -315,6 +315,6 @@ jobs:
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v5
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@zephyr_sign_with_build_num
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json
