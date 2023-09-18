@@ -14,7 +14,7 @@ concurrency:
 jobs:
   signed_app:
     name: Zephyr Signed Application Compilation
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@zephyr_sign_with_build_num
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v6
     with:
       manifest: tests/zephyr/west.yml
       app-dir: zephyr/samples/subsys/usb/dfu/
@@ -28,7 +28,7 @@ jobs:
 
   unsigned_app:
     name: Zephyr Application Compilation
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@zephyr_sign_with_build_num
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v6
     with:
       manifest: tests/zephyr/west.yml
       app-dir: zephyr/samples
