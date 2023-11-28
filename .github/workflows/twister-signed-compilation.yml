@@ -48,11 +48,18 @@ on:
         description: 'Runs twister with --integration flag'
         type: boolean
         default: true
-
+      token-app-id:
+        description: 'Github application ID for an optional app to use to request an access token'
+        type: string
+        required: false
+        default: ""
 
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
+        required: false
+      token-app-private-key:
+        description: 'Private key for an optional Github app to use to request an access token'
         required: false
 
     outputs:
@@ -114,6 +121,20 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
+
+      - name: Get token from the Github App
+        id: get_workflow_token
+        if: ${{ inputs.token-app-id != '' }}
+        uses: peter-murray/workflow-application-token-action@8e1ba3bf1619726336414f1014e37f17fbadf1db  # v2.1.0
+        with:
+          application_id: ${{ inputs.token-app-id }}
+          application_private_key: ${{ secrets.token-app-private-key }}
+
+      - name: Setup persistent github configuration
+        if: ${{ inputs.token-app-id != '' }}
+        uses: de-vri-es/setup-git-credentials@162b9dfe472513ee2960f0c97dd3cbbe80319b68  # v2.0.10
+        with:
+          credentials: https://x-access-token:${{ steps.get_workflow_token.outputs.token }}@github.com/
 
       - name: West Init
         run: |
