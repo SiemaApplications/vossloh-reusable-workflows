@@ -29,11 +29,19 @@ on:
         required: false
         type: string
         default: ""
+      token-app-id:
+        description: 'Github application ID for an optional app to use to request an access token'
+        type: string
+        required: false
+        default: ""
 
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware'
         required: true
+      token-app-private-key:
+        description: 'Private key for an optional Github app to use to request an access token'
+        required: false
 
     outputs:
       mcuboot-progfiles:
@@ -59,8 +67,10 @@ jobs:
       twister-outdir: ${{ inputs.twister-outdir }}
       tests-names: ${{ inputs.tests-names }}
       fallback-key-file: ${{ inputs.fallback-key-file }}
+      token-app-id: ${{ inputs.token-app-id }}
     secrets:
       signing-key: ${{ secrets.signing-key }}
+      token-app-private-key: ${{ secrets.token-app-private-key }}
 
   sreccat:
     runs-on: ubuntu-latest

@@ -51,11 +51,20 @@ on:
         description: 'Runs twister with --integration flag'
         type: boolean
         default: true
+      token-app-id:
+        description: 'Github application ID for an optional app to use to request an access token'
+        type: string
+        required: false
+        default: ""
 
     secrets:
       signing-key:
         description: 'Content of PEM key for which public part is stored in MCUboot firmware, and used to sign applications.'
         required: false
+      token-app-private-key:
+        description: 'Private key for an optional Github app to use to request an access token'
+        required: false
+
 
 jobs:
   release_infos:
@@ -111,8 +120,10 @@ jobs:
       fallback-key-file: ${{ inputs.fallback-key-file }}
       app-version: ${{ needs.release_infos.outputs.semver }}
       integration: ${{ inputs.integration }}
+      token-app-id: ${{ inputs.token-app-id }}
     secrets:
       signing-key: ${{ secrets.signing-key }}
+      token-app-private-key: ${{ secrets.token-app-private-key }}
 
   release:
     runs-on: ubuntu-latest
