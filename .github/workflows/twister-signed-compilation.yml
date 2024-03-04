@@ -101,12 +101,12 @@ jobs:
           echo "manifest=${repo_name}/${{inputs.manifest}}" |tee -a $GITHUB_OUTPUT
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: ${{ steps.repo-info.outputs.repo_name }}
 
       - name: Cache West Module
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache
         env:
           cache-name: cache-west-modules
@@ -313,7 +313,7 @@ jobs:
 
       - name: Upload Build Logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           retention-days: 7
           name: ${{ steps.logs-artifact-name.outputs.logs }}
@@ -321,7 +321,7 @@ jobs:
             ${{ inputs.twister-outdir }}/**/build.log
 
       - name: Upload Binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           # We don't care of the binaries after the run
           retention-days: 1
