@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Github Context
-        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@v6
+        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@v7
 
       # Inject build number into semver.
       - name: Release Infos
@@ -108,7 +108,7 @@ jobs:
           echo "release_name=${release_name}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
   app_compilation:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v6
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v7
     needs: release_infos
     with:
       app-dir: ${{ inputs.app-dir }}
@@ -135,7 +135,7 @@ jobs:
       - release_infos
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         id: download
         with:
           name: ${{needs.app_compilation.outputs.binaries}}
