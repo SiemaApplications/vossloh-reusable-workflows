@@ -291,6 +291,7 @@ jobs:
             mv ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
             mv ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
             mv ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
+            mv ${build_dir}/zephyr/zephyr.dts ${build_dir}/zephyr/${renamed_prefix}.dts
           done
 
       - name: Compute Job Outputs
