@@ -30,24 +30,12 @@ on:
         type: string
         default: 'slot0_partition'
 
-    outputs:
-      binaries:
-        description: 'Artifact name containing binaires, retrieved from compilation job.'
-        value:  ${{ jobs.mcuboot_compil.outputs.binaries }}
-
-      logs:
-        description: 'Artifact name containing the build logs, retrieved from compilation job.'
-        value: ${{ jobs.mcuboot_compil.outputs.logs }}
-
-
 jobs:
   sreccat:
     runs-on: ubuntu-latest
     name: Binary files concatenation
     env:
       ARTIFACT_INFIX: '-factory-progfiles'
-    outputs:
-      artifact-name: ${{ steps.artifact-name.outputs.artifact_name }}
 
     steps:
       - name: install srec_cat
