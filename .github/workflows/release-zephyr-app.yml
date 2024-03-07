@@ -163,9 +163,9 @@ jobs:
             binary_prefix="${board}-${app}"
             if [ ${use_mcuboot} -eq 1 ]; then
               infix="-${{needs.release_infos.outputs.semver}}"
-              files_ext=".elf .bin .hex ${infix}.signed.bin ${infix}.signed.hex ${infix}.signed.confirmed.bin ${infix}.signed.confirmed.hex"
+              files_ext=".elf .bin .hex .dts ${infix}.signed.bin ${infix}.signed.hex ${infix}.signed.confirmed.bin ${infix}.signed.confirmed.hex"
             else
-              files_ext=".elf .bin .hex"
+              files_ext=".elf .bin .hex .dts"
             fi
             echo "Config ${app} for board ${board}" | tee -a ${GITHUB_STEP_SUMMARY} | tee -a ${RELEASE_BODY}
             for ext in ${files_ext}; do
