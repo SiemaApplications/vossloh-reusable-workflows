@@ -332,6 +332,8 @@ jobs:
             ${{ inputs.twister-outdir }}/**/*.elf
             ${{ inputs.twister-outdir }}/**/*.hex
             ${{ inputs.twister-outdir }}/**/.config
+            ${{ inputs.twister-outdir }}/**/*.dts
+            !${{ inputs.twister-outdir }}/**/Kconfig.dts
             !${{ inputs.twister-outdir }}/**/zephyr_pre*.elf
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
