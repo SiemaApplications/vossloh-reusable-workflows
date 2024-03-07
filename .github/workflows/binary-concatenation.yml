@@ -68,3 +68,44 @@ jobs:
       - name: Show materials
         run: |
           find .
+
+      - name: Concatenate binaries
+        shell: bash
+        run: |
+          dts_file=${{ fromJson(steps.download-dts.outputs.downloaded_files)[0] }}
+          bin_boot=${{ fromJson(steps.download-bootloader.outputs.downloaded_files)[0] }}
+          bin_app=${{ fromJson(steps.download-application.outputs.downloaded_files)[0] }}
+          base_addr=$(sed -re '/[\t ]+flash0: flash@(.*) \{/!d ; s//0x\1/' <${dts_file})
+          sreccat_args=( )
+          for entry in $(sed -re '/[\t ]+(.*): partition@(.*) \{/!d ; s//\1:0x\2/' <${dts_file}); do
+            part_name="${entry%:*}"
+            offset="${entry#*:}"
+            if grep -q "\<${part_name}\>" <<<"${{ inputs.bootloader-partitions }}" ; then
+              bin="${bin_boot}"
+            elif grep -q "\<${part_name}\>" <<<"${{ inputs.application-partitions }}" ; then
+              bin="${bin_app}"
+            else
+              continue;
+            fi
+            sreccat_args+=( "${bin}" -binary -offset $(printf "0x%x" $((base_addr + offset))) )
+          done
+          # The application binary name follows this pattern:
+          #   <board_name>-<app_name>-<version>[.<extended_extension>].<extension>
+          #   with:
+          #     extension = bin
+          # The version follows this pattern:
+          #   <major>.<minor>.<patch><metadata>
+          #   [0-9]+\.[0-9]+\.[0-9]+.*
+          #
+          # The concatenated hex output file will be named as following:
+          #   <board_name>-<app_name>.factory-<version>[.<extended_extension>].hex
+          #
+          # sed regex:
+          # - the 1st regex extracts the filename from the application binary path.
+          # - the 2nd regex splits the application name like this:
+          #     <board_name+app_name>-<version+extended_extension>.<extension>
+          #   and reformat like this:
+          #     <board_name+app_name>.factory-<version+extended_extension>.hex
+          hex_output=$(sed -re 's@.*/([^/]+)$@\1@ ; s/(.*)-([0-9]+\.[0-9]+\.[0-9]+.*)\.([^.]*)/\1.factory-\2.hex/' <<<"${bin_app}")
+          sreccat_args+=( -Output "${hex_output}" -Intel )
+          srec_cat "${sreccat_args[@]}"
