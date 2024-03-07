@@ -1,0 +1,82 @@
+name: Factory image
+
+on:
+  workflow_call:
+    inputs:
+      bootloader-repository:
+        description: 'Project hosting the bootloader release'
+        required: true
+        type: string
+      bootloader-release:
+        description: 'Bootloader release'
+        required: true
+        type: string
+      application-repository:
+        description: 'Project hosting the application release'
+        required: true
+        type: string
+      application-release:
+        description: 'Application release'
+        required: true
+        type: string
+      bootloader-partitions:
+        description: 'Comma-separated list of the bootloader partitions DTS nodes name'
+        required: false
+        type: string
+        default: 'boot_partition,scratch_partition'
+      application-partitions:
+        description: 'Comma-separated list of the application partitions DTS nodes name'
+        required: false
+        type: string
+        default: 'slot0_partition'
+
+    outputs:
+      binaries:
+        description: 'Artifact name containing binaires, retrieved from compilation job.'
+        value:  ${{ jobs.mcuboot_compil.outputs.binaries }}
+
+      logs:
+        description: 'Artifact name containing the build logs, retrieved from compilation job.'
+        value: ${{ jobs.mcuboot_compil.outputs.logs }}
+
+
+jobs:
+  sreccat:
+    runs-on: ubuntu-latest
+    name: Binary files concatenation
+    env:
+      ARTIFACT_INFIX: '-factory-progfiles'
+    outputs:
+      artifact-name: ${{ steps.artifact-name.outputs.artifact_name }}
+
+    steps:
+      - name: install srec_cat
+        run: sudo apt-get install -y srecord
+
+      - name: Get bootloader binary
+        uses: robinraju/release-downloader@v1.9
+        id: download-bootloader
+        with:
+          repository: ${{ inputs.bootloader-repository }}
+          tag: ${{ inputs.bootloader-release }}
+          fileName: '*.bin'
+
+      - name: Get application binary
+        uses: robinraju/release-downloader@v1.9
+        id: download-application
+        with:
+          repository: ${{ inputs.application-repository }}
+          tag: ${{ inputs.application-release }}
+          fileName: '*.signed.bin'
+
+      - name: Get DTS file
+        uses: robinraju/release-downloader@v1.9
+        id: download-dts
+        with:
+          repository: ${{ inputs.application-repository }}
+          tag: ${{ inputs.application-release }}
+          fileName: '*.dts'
+
+      - name: Show materials
+        run: |
+          find .
