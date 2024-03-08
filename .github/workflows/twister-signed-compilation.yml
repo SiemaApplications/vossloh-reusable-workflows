@@ -291,6 +291,7 @@ jobs:
             mv ${build_dir}/zephyr/zephyr.bin ${build_dir}/zephyr/${renamed_prefix}.bin
             mv ${build_dir}/zephyr/zephyr.hex ${build_dir}/zephyr/${renamed_prefix}.hex
             mv ${build_dir}/zephyr/zephyr.elf ${build_dir}/zephyr/${renamed_prefix}.elf
+            mv ${build_dir}/zephyr/zephyr.dts ${build_dir}/zephyr/${renamed_prefix}.dts
           done
 
       - name: Compute Job Outputs
@@ -332,10 +333,12 @@ jobs:
             ${{ inputs.twister-outdir }}/**/*.elf
             ${{ inputs.twister-outdir }}/**/*.hex
             ${{ inputs.twister-outdir }}/**/.config
+            ${{ inputs.twister-outdir }}/**/*.dts
+            !${{ inputs.twister-outdir }}/**/Kconfig.dts
             !${{ inputs.twister-outdir }}/**/zephyr_pre*.elf
             !${{ inputs.twister-outdir }}/**/isrList.bin
 
       - name: Check Twister Results
-        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@v7
+        uses: SiemaApplications/vossloh-gh-actions/twister/results-analysis@sma/extra-artifacts
         with:
           twister-result-file: ${{ inputs.twister-outdir }}/twister.json

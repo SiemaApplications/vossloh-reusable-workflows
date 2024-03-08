@@ -1,0 +1,120 @@
+name: Factory image
+
+on:
+  workflow_call:
+    inputs:
+      bootloader-repository:
+        description: 'Project hosting the bootloader release'
+        required: true
+        type: string
+      bootloader-release:
+        description: 'Bootloader release'
+        required: true
+        type: string
+      application-repository:
+        description: 'Project hosting the application release'
+        required: true
+        type: string
+      application-release:
+        description: 'Application release'
+        required: true
+        type: string
+      bootloader-partitions:
+        description: 'Comma-separated list of the bootloader partitions DTS nodes name'
+        required: false
+        type: string
+        default: 'boot_partition,scratch_partition'
+      application-partitions:
+        description: 'Comma-separated list of the application partitions DTS nodes name'
+        required: false
+        type: string
+        default: 'slot0_partition'
+
+jobs:
+  sreccat:
+    runs-on: ubuntu-latest
+    name: Binary files concatenation
+    env:
+      ARTIFACT_INFIX: '-factory-progfiles'
+
+    steps:
+      - name: install srec_cat
+        run: sudo apt-get install -y srecord
+
+      - name: Get bootloader binary
+        uses: robinraju/release-downloader@v1.9
+        id: download-bootloader
+        with:
+          repository: ${{ inputs.bootloader-repository }}
+          tag: ${{ inputs.bootloader-release }}
+          fileName: '*.bin'
+
+      - name: Get application binary
+        uses: robinraju/release-downloader@v1.9
+        id: download-application
+        with:
+          repository: ${{ inputs.application-repository }}
+          tag: ${{ inputs.application-release }}
+          fileName: '*.signed.bin'
+
+      - name: Get DTS file
+        uses: robinraju/release-downloader@v1.9
+        id: download-dts
+        with:
+          repository: ${{ inputs.application-repository }}
+          tag: ${{ inputs.application-release }}
+          fileName: '*.dts'
+
+      - name: Show materials
+        run: |
+          find .
+
+      - name: Concatenate binaries
+        id: concatenate-binaries
+        shell: bash
+        run: |
+          dts_file=${{ fromJson(steps.download-dts.outputs.downloaded_files)[0] }}
+          bin_boot=${{ fromJson(steps.download-bootloader.outputs.downloaded_files)[0] }}
+          bin_app=${{ fromJson(steps.download-application.outputs.downloaded_files)[0] }}
+          base_addr=$(sed -re '/[\t ]+flash0: flash@(.*) \{/!d ; s//0x\1/' <${dts_file})
+          sreccat_args=( )
+          for entry in $(sed -re '/[\t ]+(.*): partition@(.*) \{/!d ; s//\1:0x\2/' <${dts_file}); do
+            part_name="${entry%:*}"
+            offset="${entry#*:}"
+            if grep -q "\<${part_name}\>" <<<"${{ inputs.bootloader-partitions }}" ; then
+              bin="${bin_boot}"
+            elif grep -q "\<${part_name}\>" <<<"${{ inputs.application-partitions }}" ; then
+              bin="${bin_app}"
+            else
+              continue;
+            fi
+            sreccat_args+=( "${bin}" -binary -offset $(printf "0x%x" $((base_addr + offset))) )
+          done
+          # The application binary name follows this pattern:
+          #   <board_name>-<app_name>-<version>[.<extended_extension>].<extension>
+          #   with:
+          #     extension = bin
+          # The version follows this pattern:
+          #   <major>.<minor>.<patch><metadata>
+          #   [0-9]+\.[0-9]+\.[0-9]+.*
+          #
+          # The concatenated hex output file will be named as following:
+          #   <board_name>-<app_name>.factory-<version>[.<extended_extension>].hex
+          #
+          # sed regex:
+          # - the 1st regex extracts the filename from the application binary path.
+          # - the 2nd regex splits the application name like this:
+          #     <board_name+app_name>-<version+extended_extension>.<extension>
+          #   and reformat like this:
+          #     <board_name+app_name>.factory-<version+extended_extension>.hex
+          hex_output=$(sed -re 's@.*/([^/]+)$@\1@ ; s/(.*)-([0-9]+\.[0-9]+\.[0-9]+.*)\.([^.]*)/\1.factory-\2.hex/' <<<"${bin_app}")
+          sreccat_args+=( -Output "${hex_output}" -Intel )
+          srec_cat "${sreccat_args[@]}"
+          echo "binary_factory=${hex_output}" | tee -a $GITHUB_OUTPUT
+
+      - name: Update release assets
+        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0 (17/05/2023)
+        with:
+          artifacts: ${{ steps.concatenate-binaries.outputs.binary_factory }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true

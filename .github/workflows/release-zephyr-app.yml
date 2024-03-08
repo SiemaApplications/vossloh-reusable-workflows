@@ -68,6 +68,7 @@ on:
 
 jobs:
   release_infos:
+    name: Release Infos
     runs-on: ubuntu-latest
     outputs:
       semver: ${{ steps.release-infos.outputs.semver }}
@@ -79,7 +80,7 @@ jobs:
 
     steps:
       - name: Github Context
-        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@v7
+        uses: SiemaApplications/vossloh-gh-actions/debug/show-github-context@sma/extra-artifacts
 
       # Inject build number into semver.
       - name: Release Infos
@@ -108,7 +109,7 @@ jobs:
           echo "release_name=${release_name}" | tee -a $GITHUB_ENV | tee -a $GITHUB_OUTPUT
 
   app_compilation:
-    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@v7
+    uses: SiemaApplications/vossloh-gh-actions/.github/workflows/twister-signed-compilation.yml@sma/extra-artifacts
     needs: release_infos
     with:
       app-dir: ${{ inputs.app-dir }}
@@ -126,6 +127,7 @@ jobs:
       token-app-private-key: ${{ secrets.token-app-private-key }}
 
   release:
+    name: Release Creation
     runs-on: ubuntu-latest
     env:
       ASSETS_PATH: release_assets
@@ -163,9 +165,9 @@ jobs:
             binary_prefix="${board}-${app}"
             if [ ${use_mcuboot} -eq 1 ]; then
               infix="-${{needs.release_infos.outputs.semver}}"
-              files_ext=".elf .bin .hex ${infix}.signed.bin ${infix}.signed.hex ${infix}.signed.confirmed.bin ${infix}.signed.confirmed.hex"
+              files_ext=".elf .bin .hex .dts ${infix}.signed.bin ${infix}.signed.hex ${infix}.signed.confirmed.bin ${infix}.signed.confirmed.hex"
             else
-              files_ext=".elf .bin .hex"
+              files_ext=".elf .bin .hex .dts"
             fi
             echo "Config ${app} for board ${board}" | tee -a ${GITHUB_STEP_SUMMARY} | tee -a ${RELEASE_BODY}
             for ext in ${files_ext}; do
