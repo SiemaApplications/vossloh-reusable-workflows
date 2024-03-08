@@ -70,6 +70,7 @@ jobs:
           find .
 
       - name: Concatenate binaries
+        id: concatenate-binaries
         shell: bash
         run: |
           dts_file=${{ fromJson(steps.download-dts.outputs.downloaded_files)[0] }}
@@ -109,3 +110,11 @@ jobs:
           hex_output=$(sed -re 's@.*/([^/]+)$@\1@ ; s/(.*)-([0-9]+\.[0-9]+\.[0-9]+.*)\.([^.]*)/\1.factory-\2.hex/' <<<"${bin_app}")
           sreccat_args+=( -Output "${hex_output}" -Intel )
           srec_cat "${sreccat_args[@]}"
+          echo "binary_factory=${hex_output}" | tee -a $GITHUB_OUTPUT
+
+      - name: Update release assets
+        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0 (17/05/2023)
+        with:
+          artifacts: ${{ steps.concatenate-binaries.outputs.binary_factory }}
+          tag: ${{ github.ref_name }}
+          allowUpdates: true
