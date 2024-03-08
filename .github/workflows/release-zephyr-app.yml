@@ -68,6 +68,7 @@ on:
 
 jobs:
   release_infos:
+    name: Release Infos
     runs-on: ubuntu-latest
     outputs:
       semver: ${{ steps.release-infos.outputs.semver }}
@@ -126,6 +127,7 @@ jobs:
       token-app-private-key: ${{ secrets.token-app-private-key }}
 
   release:
+    name: Release Creation
     runs-on: ubuntu-latest
     env:
       ASSETS_PATH: release_assets
